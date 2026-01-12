@@ -1,0 +1,123 @@
+@page "/Invoice/Cheque/{guid}"
+@model SmartMerchant.WEB.Pages.Invoice.ChequeModel
+@{
+    ViewData["Title"] = "Payment Receipt";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    <div class="pt-24 pb-12 px-6 w-full">
+        <div class="max-w-2xl mx-auto">
+            <div class="glass-card p-12 text-center relative overflow-hidden border-lime-primary/30">
+                <div class="absolute -top-20 -left-20 w-40 h-40 bg-lime-400/10 rounded-full blur-3xl"></div>
+                <div class="w-20 h-20 bg-lime-400/20 rounded-full flex items-center justify-center mx-auto mb-8">
+                    <svg class="w-10 h-10 lime-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h2 class="text-4xl font-black oswald uppercase mb-2">Payment <span class="lime-text">Successful</span></h2>
+                <p class="text-gray-400 font-bold mb-10">Digital Transaction Cheque</p>
+                
+                <div class="space-y-4 text-left border-y border-white/5 py-8 mb-8">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-xs font-black uppercase">Transaction ID</span>
+                        <span id="chequeId" class="font-bold text-xs">Loading...</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-xs font-black uppercase">Merchant</span>
+                        <span id="chequeMerchant" class="font-bold text-xs uppercase">Loading...</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-xs font-black uppercase">Paid On</span>
+                        <span id="chequeDate" class="font-bold text-xs">Loading...</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-xs font-black uppercase">Reference</span>
+                        <span id="chequeRef" class="font-bold text-xs">Loading...</span>
+                    </div>
+                    <div class="flex justify-between items-end pt-4">
+                        <span class="text-gray-500 text-xs font-black uppercase">Total Amount</span>
+                        <span id="chequeAmount" class="oswald font-black text-3xl lime-text">₴ 0.00</span>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button onclick="window.print()" class="flex-1 py-4 rounded-xl font-bold bg-white/5 border border-white/10 hover:bg-white/10">Download PDF</button>
+                    <a href="/" class="flex-1 btn-lime py-4 rounded-xl shadow-lg text-center">Return to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        const invoiceGuid = '@Model.Guid';
+
+        async function loadChequeData() {
+            try {
+                const response = await fetch(`/api/invoice/${invoiceGuid}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const invoice = data.invoice;
+                    
+                    // If not paid, redirect to payment page
+                    if (!invoice.isPaid) {
+                        window.location.href = `/Invoice/${invoiceGuid}`;
+                        return;
+                    }
+
+                    // Load merchant data
+                    let merchantName = 'Merchant';
+                    if (invoice.merchantGuid) {
+                        try {
+                            const merchantResponse = await fetch(`/api/merchant?guid=${invoice.merchantGuid}`);
+                            const merchantData = await merchantResponse.json();
+                            if (merchantData.success) {
+                                merchantName = merchantData.merchant.name;
+                            }
+                        } catch (e) {
+                            console.error('Error loading merchant:', e);
+                        }
+                    }
+
+                    // Generate transaction ID
+                    const txnId = `TXN-${invoiceGuid.substring(0, 8).toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+
+                    // Update UI
+                    document.getElementById('chequeId').textContent = txnId;
+                    document.getElementById('chequeMerchant').textContent = merchantName;
+                    document.getElementById('chequeDate').textContent = new Date().toLocaleString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    document.getElementById('chequeRef').textContent = `#${invoice.number}`;
+                    document.getElementById('chequeAmount').textContent = `₴ ${parseFloat(invoice.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                } else {
+                    alert('Invoice not found');
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error loading cheque data:', error);
+                alert('Failed to load receipt');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadChequeData();
+        });
+    </script>
+</body>
+</html>
+

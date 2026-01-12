@@ -1,0 +1,32 @@
+# Ignore build artifacts
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+
+# Ignore test results
+**/TestResults/
+**/coverage/
+
+# Ignore user-specific files
+**/.user
+**/.suo
+**/.userosscache
+**/.sln.docstates
+
+# Ignore NuGet packages
+**/packages/
+**/*.nupkg
+**/*.snupkg
+
+# Ignore database files
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Ignore logs
+**/logs/
+**/*.log
+
+# Ignore baget data (will be created by docker-compose)
+baget-data/

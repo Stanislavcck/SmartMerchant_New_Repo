@@ -1,0 +1,197 @@
+@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="mt-12 max-w-lg mx-auto">
+    <div class="text-center mb-10">
+        <div class="inline-flex items-center space-x-2 bg-lime-400/10 px-4 py-2 rounded-full border border-lime-400/20 mb-6">
+            <span class="w-2 h-2 rounded-full lime-bg animate-pulse"></span>
+            <span class="text-[10px] uppercase font-black tracking-[0.2em] lime-text">Onboarding Portal Open</span>
+        </div>
+        <h2 class="text-5xl font-black oswald uppercase mb-2">Join the <span class="lime-text">Circle</span></h2>
+        <p class="text-gray-500 font-bold">Start processing global payments in minutes.</p>
+    </div>
+    <div class="glass-card p-10 space-y-8 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 lime-bg"></div>
+        
+        <form method="post" id="registerForm" class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="auth-label">First Name</label>
+                    <input type="text" asp-for="FirstName" placeholder="John" class="w-full p-4 rounded-xl font-bold transition-all placeholder:text-gray-600" required>
+                    <span asp-validation-for="FirstName" class="text-red-400 text-xs"></span>
+                </div>
+                <div>
+                    <label class="auth-label">Last Name</label>
+                    <input type="text" asp-for="LastName" placeholder="Doe" class="w-full p-4 rounded-xl font-bold transition-all placeholder:text-gray-600" required>
+                    <span asp-validation-for="LastName" class="text-red-400 text-xs"></span>
+                </div>
+            </div>
+            <div>
+                <label class="auth-label">Middle Name (Optional)</label>
+                <input type="text" asp-for="MiddleName" placeholder="Michael" class="w-full p-4 rounded-xl font-bold transition-all placeholder:text-gray-600">
+                <span asp-validation-for="MiddleName" class="text-red-400 text-xs"></span>
+            </div>
+            <div>
+                <label class="auth-label">Username</label>
+                <input type="text" asp-for="Username" placeholder="johndoe" class="w-full p-4 rounded-xl font-bold transition-all placeholder:text-gray-600" required>
+                <span asp-validation-for="Username" class="text-red-400 text-xs"></span>
+            </div>
+            <div>
+                <label class="auth-label">Account Password</label>
+                <input type="password" asp-for="Password" id="password" placeholder="Min. 12 characters" class="w-full p-4 rounded-xl font-bold transition-all placeholder:text-gray-600" required>
+                <span asp-validation-for="Password" class="text-red-400 text-xs"></span>
+            </div>
+            <div>
+                <label class="auth-label">Confirm Password</label>
+                <input type="password" asp-for="ConfirmPassword" id="confirmPassword" placeholder="Confirm your password" class="w-full p-4 rounded-xl font-bold transition-all placeholder:text-gray-600" required>
+                <span asp-validation-for="ConfirmPassword" class="text-red-400 text-xs"></span>
+            </div>
+
+            <div class="p-4 bg-white/5 rounded-xl border border-white/5">
+                <label class="flex items-start space-x-3 cursor-pointer">
+                    <input type="checkbox" asp-for="IsSoleProprietorship" id="isSoleProprietorship" class="mt-1 w-4 h-4 rounded !bg-transparent border-white/10 checked:!bg-lime-400" required>
+                    <span class="text-[10px] text-gray-500 leading-relaxed font-bold">
+                        I'm sole proprietorship
+                    </span>
+                </label>
+                <span asp-validation-for="IsSoleProprietorship" class="text-red-400 text-xs block mt-1"></span>
+            </div>
+
+            <div class="p-4 bg-white/5 rounded-xl border border-white/5">
+                <label class="flex items-start space-x-3 cursor-pointer">
+                    <input type="checkbox" asp-for="AgreeToTerms" id="agreeToTerms" class="mt-1 w-4 h-4 rounded !bg-transparent border-white/10 checked:!bg-lime-400" required>
+                    <span class="text-[10px] text-gray-500 leading-relaxed font-bold">
+                        I agree to the Global Merchant Agreement, Privacy Policy, and confirm that I am not engaged in any prohibited business activities as defined in the Master Service Disclosure.
+                    </span>
+                </label>
+                <span asp-validation-for="AgreeToTerms" class="text-red-400 text-xs block mt-1"></span>
+            </div>
+
+            <div id="errorMessage" class="hidden bg-red-400/20 border border-red-400/50 text-red-400 px-4 py-3 rounded-xl text-sm font-bold"></div>
+            <button type="submit" id="submitButton" class="btn-lime w-full py-5 rounded-2xl shadow-2xl text-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>Register</button>
+        </form>
+
+        <div class="text-center pt-4">
+            <p class="text-sm text-gray-500 font-bold">Already a partner? <a asp-page="/Login" class="lime-text hover:underline">Secure Log In</a></p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('registerForm');
+            const submitButton = document.getElementById('submitButton');
+            const errorMessage = document.getElementById('errorMessage');
+            const isSoleProprietorship = document.getElementById('isSoleProprietorship');
+            const agreeToTerms = document.getElementById('agreeToTerms');
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirmPassword');
+            const requiredInputs = form.querySelectorAll('input[required], select[required]');
+
+            function validateForm() {
+                let isValid = true;
+
+                // Check all required inputs
+                requiredInputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        if (!input.checked) {
+                            isValid = false;
+                        }
+                    } else {
+                        if (!input.value.trim()) {
+                            isValid = false;
+                        }
+                    }
+                });
+
+                // Check password match
+                if (password.value && confirmPassword.value) {
+                    if (password.value !== confirmPassword.value) {
+                        isValid = false;
+                    }
+                }
+
+                // Check password length
+                if (password.value && password.value.length < 12) {
+                    isValid = false;
+                }
+
+                // Check username length
+                const username = document.querySelector('[name="Username"]');
+                if (username && username.value && (username.value.length < 3 || username.value.length > 50)) {
+                    isValid = false;
+                }
+
+                // Check checkboxes
+                if (!isSoleProprietorship.checked || !agreeToTerms.checked) {
+                    isValid = false;
+                }
+
+                submitButton.disabled = !isValid;
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.classList.remove('hidden');
+                setTimeout(() => {
+                    errorMessage.classList.add('hidden');
+                }, 5000);
+            }
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (submitButton.disabled) return;
+
+                submitButton.disabled = true;
+                submitButton.textContent = 'Registering...';
+
+                const formData = {
+                    firstName: document.querySelector('[name="FirstName"]').value,
+                    lastName: document.querySelector('[name="LastName"]').value,
+                    middleName: document.querySelector('[name="MiddleName"]').value || null,
+                    username: document.querySelector('[name="Username"]').value,
+                    password: password.value
+                };
+
+                try {
+                    const response = await fetch('/api/authorization/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success === true) {
+                        window.location.href = '/Login';
+                    } else {
+                        showError(data.message || 'Registration failed. Please try again.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Register';
+                        validateForm();
+                    }
+                } catch (error) {
+                    showError('An error occurred. Please try again.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Register';
+                    validateForm();
+                }
+            });
+
+            // Add event listeners to all form inputs
+            form.addEventListener('input', validateForm);
+            form.addEventListener('change', validateForm);
+            
+            // Initial validation
+            validateForm();
+        });
+    </script>
+}

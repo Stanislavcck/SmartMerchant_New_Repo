@@ -1,0 +1,166 @@
+@page
+@model SmartMerchant.WEB.Pages.Merchant.CreateModel
+@{
+    ViewData["Title"] = "Create Merchant";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    @await Html.PartialAsync("_DashboardHeader")
+
+    <div class="mt-12 max-w-2xl mx-auto pt-24 pb-12 px-6">
+    <div class="text-center mb-10">
+        <h2 class="text-4xl font-black oswald uppercase mb-2">Finalize <span class="lime-text">Identity</span></h2>
+        <p class="text-gray-500 font-bold">This branding will be visible to your customers.</p>
+    </div>
+    <div class="glass-card p-10 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 lime-bg"></div>
+        <form id="merchantForm">
+            <div id="errorMessage" class="hidden bg-red-400/20 border border-red-400/50 text-red-400 px-4 py-3 rounded-xl text-sm font-bold mb-6"></div>
+            <div class="grid md:grid-cols-2 gap-10">
+                <div class="space-y-6">
+                    <div>
+                        <label class="auth-label">Display Name</label>
+                        <input type="text" id="merchantName" placeholder="e.g. Lime Coffee Shop" class="w-full p-4 rounded-xl font-bold" required>
+                    </div>
+                    <div>
+                        <label class="auth-label">Public Description</label>
+                        <textarea id="description" placeholder="Describe your service to customers..." class="w-full p-4 rounded-xl min-h-[140px] font-bold" required></textarea>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <label class="auth-label">Brand Logo URL</label>
+                        <input type="text" id="logoUrl" placeholder="https://..." class="w-full p-4 rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="auth-label">Visual Verification</label>
+                        <div class="glass-card p-8 flex flex-col items-center text-center space-y-4 border-lime-primary/20 bg-lime-400/5">
+                            <div id="logoPreview" class="w-24 h-24 lime-bg rounded-[2rem] flex items-center justify-center overflow-hidden shadow-2xl ring-4 ring-black">
+                                <span class="text-black font-black text-3xl">L</span>
+                            </div>
+                            <div>
+                                <div class="font-black oswald uppercase text-lg" id="previewName">Merchant Preview</div>
+                                <div class="text-[10px] text-lime-400 font-black tracking-widest uppercase">Verified Checkout</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-10 pt-8 border-t border-white/5 flex justify-end">
+                <button type="submit" id="submitButton" class="btn-lime px-12 py-5 rounded-2xl shadow-2xl text-lg">Submit Application</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('merchantForm');
+            const submitButton = document.getElementById('submitButton');
+            const errorMessage = document.getElementById('errorMessage');
+            const logoUrl = document.getElementById('logoUrl');
+            const merchantName = document.getElementById('merchantName');
+            const description = document.getElementById('description');
+            const preview = document.getElementById('logoPreview');
+            const previewName = document.getElementById('previewName');
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.classList.remove('hidden');
+                setTimeout(() => {
+                    errorMessage.classList.add('hidden');
+                }, 5000);
+            }
+
+            function updatePreview() {
+                const url = logoUrl.value;
+                if (url) {
+                    preview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\'text-black font-black text-3xl\'>L</span>'">`;
+                } else {
+                    preview.innerHTML = `<span class="text-black font-black text-3xl">L</span>`;
+                }
+            }
+
+            if (logoUrl) {
+                logoUrl.addEventListener('input', updatePreview);
+                logoUrl.addEventListener('change', updatePreview);
+            }
+
+            if (merchantName) {
+                merchantName.addEventListener('input', function() {
+                    previewName.textContent = this.value || 'Merchant Preview';
+                });
+            }
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                submitButton.disabled = true;
+                submitButton.textContent = 'Submitting...';
+
+                const token = localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+
+                if (!token) {
+                    showError('You must be logged in to create a merchant.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Submit Application';
+                    window.location.href = '/Login';
+                    return;
+                }
+
+                const formData = {
+                    name: merchantName.value.trim(),
+                    description: description.value.trim() || null,
+                    logoUrl: logoUrl.value.trim() || null
+                };
+
+                if (!formData.name) {
+                    showError('Merchant name is required.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Submit Application';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/merchant/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': token
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        window.location.href = '/Admin/Main';
+                    } else {
+                        showError(data.message || 'Failed to create merchant. Please try again.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Submit Application';
+                    }
+                } catch (error) {
+                    showError('An error occurred. Please try again.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Submit Application';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

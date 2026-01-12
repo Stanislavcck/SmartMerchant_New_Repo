@@ -1,0 +1,204 @@
+@page
+@model SmartMerchant.WEB.Pages.Admin.MainModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    ViewData["ActivePage"] = "main";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    @await Html.PartialAsync("_DashboardHeader")
+
+    <div class="pt-24 pb-12 px-6 w-full max-w-full">
+    <div class="flex flex-col lg:flex-row gap-8">
+        @await Html.PartialAsync("_AdminSidebar")
+
+        <!-- Content Area -->
+        <div class="flex-grow space-y-8">
+            <!-- Top Summary -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-3xl font-black oswald uppercase">Good Morning, <span class="lime-text" id="userGreeting">Yung CEO</span></h2>
+                    <p class="text-gray-500 font-bold text-sm uppercase tracking-widest">Active Merchant ID: <span id="merchantCode">Loading...</span></p>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="bg-white/5 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold hover:bg-white/10">Export Data</button>
+                    <a asp-page="/Admin/Invoices" class="btn-lime px-6 py-2 rounded-xl text-xs font-black">Create Invoice</a>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-card p-6 stat-card">
+                    <div class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Current Balance</div>
+                    <div class="text-2xl font-black oswald" id="currentBalance">₴ 0.00</div>
+                    <div class="text-xs text-lime-400 font-bold mt-2" id="balanceChange">Loading...</div>
+                </div>
+                <div class="glass-card p-6 stat-card">
+                    <div class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Pending Settlements</div>
+                    <div class="text-2xl font-black oswald" id="pendingSettlements">₴ 0.00</div>
+                    <div class="text-xs text-gray-500 font-bold mt-2">Unpaid invoices</div>
+                </div>
+                <div class="glass-card p-6 stat-card">
+                    <div class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Today's Transactions</div>
+                    <div class="text-2xl font-black oswald" id="todayTransactions">0</div>
+                    <div class="text-xs text-lime-400 font-bold mt-2">Success Rate: <span id="successRate">0%</span></div>
+                </div>
+                <div class="glass-card p-6 stat-card">
+                    <div class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Chargeback Risk</div>
+                    <div class="text-2xl font-black oswald" id="chargebackRisk">0.00%</div>
+                    <div class="text-xs text-blue-400 font-bold mt-2">Very Low • Good</div>
+                </div>
+            </div>
+
+            <!-- Table Section -->
+            <div class="glass-card p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-black oswald uppercase">Live Transaction Stream</h3>
+                    <a asp-page="/Admin/Invoices" class="text-lime-400 text-xs font-black uppercase tracking-widest hover:underline">View All</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="border-b border-white/10">
+                            <tr class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                <th class="pb-4 pr-4">Merchant Order ID</th>
+                                <th class="pb-4 pr-4">Customer</th>
+                                <th class="pb-4 pr-4">Amount</th>
+                                <th class="pb-4 pr-4">Status</th>
+                                <th class="pb-4">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTableBody" class="text-sm font-bold">
+                            <tr><td colspan="5" class="py-8 text-center text-gray-500">Loading transactions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        function getToken() {
+            return localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+        }
+
+        async function loadDashboardData() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                // Load stats
+                const statsResponse = await fetch('/api/dashboard/stats', {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const statsData = await statsResponse.json();
+
+                if (statsData.success) {
+                    const stats = statsData.stats;
+                    const merchant = statsData.merchant;
+
+                    // Update merchant info
+                    document.getElementById('merchantCode').textContent = merchant.code || 'N/A';
+                    
+                    // Update stats
+                    document.getElementById('currentBalance').textContent = `₴ ${parseFloat(stats.currentBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    document.getElementById('pendingSettlements').textContent = `₴ ${parseFloat(stats.pendingSettlements || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    document.getElementById('todayTransactions').textContent = stats.todayTransactionsCount || 0;
+                    document.getElementById('successRate').textContent = `${parseFloat(stats.successRate || 0).toFixed(1)}%`;
+                    document.getElementById('chargebackRisk').textContent = `${parseFloat(stats.chargebackRisk || 0).toFixed(2)}%`;
+
+                    // Update balance change
+                    const balanceChange = stats.balanceChangePercent || 0;
+                    const balanceChangeEl = document.getElementById('balanceChange');
+                    if (balanceChange > 0) {
+                        balanceChangeEl.textContent = `↑ ${Math.abs(balanceChange).toFixed(1)}% from yesterday`;
+                        balanceChangeEl.className = 'text-xs text-lime-400 font-bold mt-2';
+                    } else if (balanceChange < 0) {
+                        balanceChangeEl.textContent = `↓ ${Math.abs(balanceChange).toFixed(1)}% from yesterday`;
+                        balanceChangeEl.className = 'text-xs text-red-400 font-bold mt-2';
+                    } else {
+                        balanceChangeEl.textContent = 'No change from yesterday';
+                        balanceChangeEl.className = 'text-xs text-gray-500 font-bold mt-2';
+                    }
+                }
+
+                // Load recent transactions
+                const transactionsResponse = await fetch('/api/dashboard/transactions?limit=10', {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const transactionsData = await transactionsResponse.json();
+
+                if (transactionsData.success) {
+                    renderTransactions(transactionsData.transactions);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        function renderTransactions(transactions) {
+            const body = document.getElementById('transactionsTableBody');
+            body.innerHTML = '';
+
+            if (transactions.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-gray-500 font-bold">No transactions yet</td></tr>';
+                return;
+            }
+
+            transactions.forEach(txn => {
+                const statusHTML = txn.status === 'Success' 
+                    ? '<span class="bg-lime-400/20 text-lime-400 px-2 py-1 rounded-md text-[10px] uppercase">Success</span>'
+                    : '<span class="bg-white/10 text-gray-400 px-2 py-1 rounded-md text-[10px] uppercase">Pending</span>';
+
+                body.innerHTML += `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td class="py-4 pr-4 text-gray-300">#${txn.orderId}</td>
+                        <td class="py-4 pr-4">${txn.customer || 'Anonymous'}</td>
+                        <td class="py-4 pr-4">₴ ${parseFloat(txn.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="py-4 pr-4">${statusHTML}</td>
+                        <td class="py-4 text-gray-500">${txn.timeAgo}</td>
+                    </tr>`;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle Okta token from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const oktaToken = urlParams.get('oktaToken');
+            if (oktaToken) {
+                // Store token in localStorage and cookie
+                localStorage.setItem('authToken', oktaToken);
+                document.cookie = `authToken=${oktaToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            loadDashboardData();
+            
+            // Refresh data every 30 seconds
+            setInterval(loadDashboardData, 30000);
+        });
+    </script>
+</body>
+</html>
+

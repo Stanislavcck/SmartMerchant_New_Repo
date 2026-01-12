@@ -1,0 +1,454 @@
+@page
+@model SmartMerchant.WEB.Pages.Admin.InvoicesModel
+@{
+    ViewData["Title"] = "Invoice Registry";
+    ViewData["ActivePage"] = "invoices";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    @await Html.PartialAsync("_DashboardHeader")
+
+    <div class="pt-24 pb-12 px-6 w-full max-w-full">
+    <div class="flex flex-col lg:flex-row gap-8">
+        @await Html.PartialAsync("_AdminSidebar")
+
+        <!-- Main Content -->
+        <div class="flex-grow">
+            <div class="space-y-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black oswald uppercase">Invoice <span class="lime-text">Registry</span></h2>
+                        <p class="text-gray-500 font-bold text-sm uppercase tracking-widest">Manage your payment requests</p>
+                    </div>
+                    <button onclick="openModal('createModal')" class="btn-lime px-8 py-3 rounded-xl text-sm font-black shadow-xl flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>Create New Invoice</span>
+                    </button>
+                </div>
+
+                <div class="glass-card p-8">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="border-b border-white/10">
+                                <tr class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                    <th class="pb-4 pr-4">Number</th>
+                                    <th class="pb-4 pr-4">Amount (UAH)</th>
+                                    <th class="pb-4 pr-4">Description</th>
+                                    <th class="pb-4 pr-4">Created At</th>
+                                    <th class="pb-4 pr-4">Due At</th>
+                                    <th class="pb-4 pr-4">Status</th>
+                                    <th class="pb-4 pr-4">Paid By</th>
+                                    <th class="pb-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoiceTableBody" class="text-sm font-bold">
+                                <!-- Data populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="pagination" class="mt-6 flex items-center justify-between">
+                        <div class="text-sm text-gray-500 font-bold">
+                            Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="totalCount">0</span> invoices
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="prevPage" onclick="changePage(currentPage - 1)" class="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Previous</button>
+                            <div id="pageNumbers" class="flex space-x-1">
+                                <!-- Page numbers populated via JS -->
+                            </div>
+                            <button id="nextPage" onclick="changePage(currentPage + 1)" class="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Create Modal -->
+    <div id="createModal" class="modal-overlay">
+        <div class="glass-card p-8 w-full max-w-md border-lime-primary/30">
+            <h3 class="text-2xl font-black oswald uppercase mb-6">Create <span class="lime-text">Invoice</span></h3>
+            <div class="space-y-6">
+                <div>
+                    <label class="auth-label">Amount (UAH)</label>
+                    <input type="number" id="invoiceAmount" step="0.01" placeholder="0.00" class="w-full p-4 rounded-xl font-bold">
+                </div>
+                <div>
+                    <label class="auth-label">Description (Optional)</label>
+                    <textarea id="invoiceDesc" placeholder="What is this for?" class="w-full p-4 rounded-xl font-bold min-h-[100px]"></textarea>
+                </div>
+                <div class="flex space-x-4 pt-4">
+                    <button onclick="closeModal('createModal')" class="flex-1 py-4 rounded-xl font-bold bg-white/5 border border-white/10 hover:bg-white/10">Cancel</button>
+                    <button onclick="createInvoice()" class="flex-1 py-4 rounded-xl btn-lime shadow-xl">Generate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal-overlay">
+        <div class="glass-card p-10 w-full max-w-lg border-lime-primary/30">
+            <div class="flex justify-between items-start mb-8">
+                <div class="fancy-nav lime-text text-3xl">LIME</div>
+                <div class="text-right">
+                    <div id="viewNumber" class="oswald font-black text-xl">#INV-000</div>
+                    <div id="viewDate" class="text-[10px] uppercase font-bold text-gray-500">Jan 01, 2026</div>
+                </div>
+            </div>
+            <div class="space-y-6 py-6 border-y border-white/10">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 uppercase text-[10px] font-black">Status</span>
+                    <span id="viewStatus" class="font-bold text-xs"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 uppercase text-[10px] font-black">Description</span>
+                    <span id="viewDescription" class="font-bold text-sm text-right max-w-[200px]"></span>
+                </div>
+                <div class="flex justify-between items-end">
+                    <span class="text-gray-500 uppercase text-[10px] font-black">Total Due</span>
+                    <span id="viewAmount" class="oswald font-black text-3xl lime-text">₴ 0.00</span>
+                </div>
+            </div>
+            <div class="mt-8">
+                <button onclick="closeModal('viewModal')" class="w-full py-4 rounded-xl btn-lime shadow-xl">Close View</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="deleteModal" class="modal-overlay">
+        <div class="glass-card p-8 w-full max-w-sm border-red-500/30">
+            <div class="text-center space-y-4">
+                <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </div>
+                <h3 class="text-xl font-black oswald uppercase">Void Invoice?</h3>
+                <p class="text-sm text-gray-400 font-bold">This will permanently delete invoice <span id="deleteInvNum" class="text-white">#000</span>. This action cannot be undone.</p>
+                <div class="flex space-x-4 pt-6">
+                    <button onclick="closeModal('deleteModal')" class="flex-1 py-3 rounded-xl font-bold bg-white/5 border border-white/10">Keep</button>
+                    <button id="confirmDeleteBtn" class="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold shadow-xl hover:bg-red-600">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalPages = 1;
+        let totalCount = 0;
+        let deleteTargetGuid = null;
+
+        function getToken() {
+            return localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+        }
+
+        async function loadInvoices(page = 1) {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/invoice?page=${page}&pageSize=${pageSize}`, {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentPage = data.pagination.page;
+                    totalPages = data.pagination.totalPages;
+                    totalCount = data.pagination.totalCount;
+                    renderInvoices(data.invoices);
+                    renderPagination();
+                } else {
+                    console.error('Failed to load invoices:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading invoices:', error);
+            }
+        }
+
+        function renderInvoices(invoices) {
+            const container = document.getElementById('invoiceTableBody');
+            container.innerHTML = '';
+
+            if (invoices.length === 0) {
+                container.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500 font-bold">No invoices found</td></tr>';
+                return;
+            }
+
+            const now = new Date();
+
+            invoices.forEach(inv => {
+                const due = new Date(inv.dueAt);
+                let statusHTML = '';
+                
+                if (inv.isPaid) {
+                    statusHTML = `
+                        <div class="flex items-center text-lime-400 space-x-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                            <span class="text-[10px] uppercase">Paid</span>
+                        </div>`;
+                } else if (due < now) {
+                    statusHTML = `
+                        <div class="flex items-center text-red-500 space-x-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+                            <span class="text-[10px] uppercase">Expired</span>
+                        </div>`;
+                } else {
+                    statusHTML = `
+                        <div class="flex items-center text-blue-400 space-x-1">
+                            <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+                            <span class="text-[10px] uppercase">Pending</span>
+                        </div>`;
+                }
+
+                container.innerHTML += `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                        <td class="py-4 pr-4 text-gray-400">#${inv.number}</td>
+                        <td class="py-4 pr-4">₴ ${parseFloat(inv.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="py-4 pr-4 max-w-[150px] truncate text-gray-500">${inv.description || '-'}</td>
+                        <td class="py-4 pr-4 text-gray-500">${inv.createdAt}</td>
+                        <td class="py-4 pr-4 text-gray-500">${inv.dueAt}</td>
+                        <td class="py-4 pr-4">${statusHTML}</td>
+                        <td class="py-4 pr-4 text-gray-400 text-xs">${inv.paidBy || '-'}</td>
+                        <td class="py-4">
+                            <div class="flex space-x-2">
+                                <button onclick="copyPaymentLink('${inv.guid}')" class="p-2 bg-white/5 rounded-lg hover:bg-blue-400/20 hover:text-blue-400 transition" title="Copy Payment Link">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                                </button>
+                                <button onclick="viewInvoice('${inv.guid}')" class="p-2 bg-white/5 rounded-lg hover:bg-lime-400/20 hover:text-lime-400 transition" title="View Details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
+                                <button onclick="confirmDelete('${inv.guid}', '${inv.number}')" class="p-2 bg-white/5 rounded-lg hover:bg-red-500/20 hover:text-red-500 transition" title="Delete">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderPagination() {
+            const showingFrom = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const showingTo = Math.min(currentPage * pageSize, totalCount);
+
+            document.getElementById('showingFrom').textContent = showingFrom;
+            document.getElementById('showingTo').textContent = showingTo;
+            document.getElementById('totalCount').textContent = totalCount;
+
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage >= totalPages;
+
+            const pageNumbers = document.getElementById('pageNumbers');
+            pageNumbers.innerHTML = '';
+
+            const maxPagesToShow = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+            if (endPage - startPage < maxPagesToShow - 1) {
+                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.className = `px-3 py-2 rounded-lg text-sm font-bold ${i === currentPage ? 'bg-lime-400 text-black' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`;
+                button.onclick = () => changePage(i);
+                pageNumbers.appendChild(button);
+            }
+        }
+
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            loadInvoices(page);
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        async function createInvoice() {
+            const amount = parseFloat(document.getElementById('invoiceAmount').value);
+            const desc = document.getElementById('invoiceDesc').value || '';
+
+            if (isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
+
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/invoice/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        description: desc
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    closeModal('createModal');
+                    document.getElementById('invoiceAmount').value = '';
+                    document.getElementById('invoiceDesc').value = '';
+                    loadInvoices(1);
+                } else {
+                    alert(data.message || 'Failed to create invoice');
+                }
+            } catch (error) {
+                console.error('Error creating invoice:', error);
+                alert('An error occurred while creating the invoice');
+            }
+        }
+
+        async function viewInvoice(guid) {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/invoice/${guid}`, {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const inv = data.invoice;
+                    document.getElementById('viewNumber').textContent = `#${inv.number}`;
+                    document.getElementById('viewDate').textContent = inv.createdAt;
+                    document.getElementById('viewDescription').textContent = inv.description || 'No description';
+                    document.getElementById('viewAmount').textContent = `₴ ${parseFloat(inv.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    
+                    const statusEl = document.getElementById('viewStatus');
+                    const now = new Date();
+                    const due = new Date(inv.dueAt);
+
+                    if (inv.isPaid) {
+                        statusEl.textContent = 'PAID';
+                        statusEl.className = 'font-bold text-xs text-lime-400';
+                    } else if (due < now) {
+                        statusEl.textContent = 'EXPIRED';
+                        statusEl.className = 'font-bold text-xs text-red-500';
+                    } else {
+                        statusEl.textContent = 'PENDING';
+                        statusEl.className = 'font-bold text-xs text-blue-400';
+                    }
+
+                    openModal('viewModal');
+                } else {
+                    alert(data.message || 'Failed to load invoice');
+                }
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+                alert('An error occurred while loading the invoice');
+            }
+        }
+
+        function confirmDelete(guid, number) {
+            deleteTargetGuid = guid;
+            document.getElementById('deleteInvNum').textContent = `#${number}`;
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.onclick = async () => {
+                const token = getToken();
+                if (!token) {
+                    window.location.href = '/Login';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/invoice/${guid}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': token
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        closeModal('deleteModal');
+                        loadInvoices(currentPage);
+                    } else {
+                        alert(data.message || 'Failed to delete invoice');
+                    }
+                } catch (error) {
+                    console.error('Error deleting invoice:', error);
+                    alert('An error occurred while deleting the invoice');
+                }
+            };
+            openModal('deleteModal');
+        }
+
+        function copyPaymentLink(guid) {
+            const url = `${window.location.origin}/Invoice/${guid}`;
+            navigator.clipboard.writeText(url).then(() => {
+                // Show feedback
+                const button = event.target.closest('button');
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>';
+                button.classList.add('bg-lime-400/20', 'text-lime-400');
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('bg-lime-400/20', 'text-lime-400');
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = url;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('Payment link copied to clipboard!');
+            });
+        }
+
+        // Load invoices on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadInvoices(1);
+        });
+    </script>
+</body>
+</html>
+

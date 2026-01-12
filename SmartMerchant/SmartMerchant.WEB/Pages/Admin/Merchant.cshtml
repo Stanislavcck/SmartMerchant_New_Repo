@@ -1,0 +1,192 @@
+@page
+@model SmartMerchant.WEB.Pages.Admin.MerchantModel
+@{
+    ViewData["Title"] = "Merchant Settings";
+    ViewData["ActivePage"] = "merchant";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    @await Html.PartialAsync("_DashboardHeader")
+
+    <div class="pt-24 pb-12 px-6 w-full max-w-full">
+        <div class="flex flex-col lg:flex-row gap-8">
+            @await Html.PartialAsync("_AdminSidebar")
+
+            <!-- Main Content -->
+            <div class="flex-grow">
+                <div class="space-y-8">
+                    <div>
+                        <h2 class="text-3xl font-black oswald uppercase">Merchant <span class="lime-text">Settings</span></h2>
+                        <p class="text-gray-500 font-bold text-sm uppercase tracking-widest">Update business identity & financial data</p>
+                    </div>
+
+                    <div class="grid lg:grid-cols-3 gap-8">
+                        <!-- Financial Overview -->
+                        <div class="lg:col-span-1 space-y-6">
+                            <div class="glass-card p-8 border-lime-primary/30 relative overflow-hidden">
+                                <div class="absolute -right-4 -top-4 w-24 h-24 bg-lime-400/10 rounded-full blur-2xl"></div>
+                                <span class="auth-label">Total Liquid Balance</span>
+                                <div id="merchantBalance" class="text-4xl font-black oswald lime-text leading-none mt-2">₴ 0.00</div>
+                                <div class="mt-8 pt-6 border-t border-white/5 space-y-4">
+                                    <div class="flex justify-between text-xs font-bold"><span class="text-gray-500 uppercase">Status</span><span class="text-lime-400">ACTIVE</span></div>
+                                    <div class="flex justify-between text-xs font-bold"><span class="text-gray-500 uppercase">Tier</span><span class="text-white">3.99%</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Edit Form -->
+                        <div class="lg:col-span-2 glass-card p-8 space-y-8">
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="auth-label">Merchant Name</label>
+                                    <input type="text" id="editMerchantName" class="w-full p-4 rounded-xl font-bold" placeholder="Merchant Name">
+                                </div>
+                                <div>
+                                    <label class="auth-label">Logo URL</label>
+                                    <input type="text" id="editLogoUrl" class="w-full p-4 rounded-xl font-bold" placeholder="Logo URL" oninput="updateMerchantPreview()">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="auth-label">Business Description</label>
+                                <textarea id="editMerchantDesc" class="w-full p-4 rounded-xl font-bold min-h-[120px]" placeholder="Business Description"></textarea>
+                            </div>
+
+                            <div class="flex items-center space-x-6 p-6 bg-white/5 rounded-2xl border border-white/5">
+                                <div id="editLogoPreview" class="w-20 h-20 lime-bg rounded-[1.5rem] flex items-center justify-center overflow-hidden ring-2 ring-black">
+                                    <span class="text-black font-black text-2xl">L</span>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-black text-gray-500 uppercase">Live Preview</div>
+                                    <div id="previewName" class="font-black oswald uppercase text-lg">Merchant Name</div>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 flex justify-end">
+                                <button onclick="saveMerchantSettings()" class="btn-lime px-10 py-4 rounded-xl shadow-xl">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        let merchantGuid = null;
+
+        function getToken() {
+            return localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+        }
+
+        async function loadMerchantData() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/merchant', {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const merchant = data.merchant;
+                    merchantGuid = merchant.guid;
+                    document.getElementById('editMerchantName').value = merchant.name || '';
+                    document.getElementById('editMerchantDesc').value = merchant.description || '';
+                    document.getElementById('editLogoUrl').value = merchant.logoUrl || '';
+                    document.getElementById('merchantBalance').textContent = `₴ ${parseFloat(merchant.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    updateMerchantPreview();
+                } else {
+                    console.error('Failed to load merchant:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading merchant:', error);
+            }
+        }
+
+        function updateMerchantPreview() {
+            const name = document.getElementById('editMerchantName').value;
+            const url = document.getElementById('editLogoUrl').value;
+            document.getElementById('previewName').textContent = name || 'Merchant Name';
+            
+            const preview = document.getElementById('editLogoPreview');
+            if (url) {
+                preview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-black font-black text-2xl\\'>L</span>'">`;
+            } else {
+                preview.innerHTML = '<span class="text-black font-black text-2xl">L</span>';
+            }
+        }
+
+        async function saveMerchantSettings() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            if (!merchantGuid) {
+                alert('Merchant not found');
+                return;
+            }
+
+            const name = document.getElementById('editMerchantName').value.trim();
+            const description = document.getElementById('editMerchantDesc').value.trim();
+            const logoUrl = document.getElementById('editLogoUrl').value.trim();
+
+            if (!name) {
+                alert('Merchant name is required');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/merchant/edit/${merchantGuid}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        description: description || null,
+                        logoUrl: logoUrl || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Merchant settings saved successfully!');
+                } else {
+                    alert(data.message || 'Failed to save merchant settings');
+                }
+            } catch (error) {
+                console.error('Error saving merchant:', error);
+                alert('An error occurred while saving merchant settings');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMerchantData();
+        });
+    </script>
+</body>
+</html>
+

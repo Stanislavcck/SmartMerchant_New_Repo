@@ -1,0 +1,73 @@
+@page
+@model SetupModel
+@{
+    ViewData["Title"] = "Setup Merchant";
+}
+
+<div class="mt-12 max-w-2xl mx-auto">
+    <div class="text-center mb-10">
+        <h2 class="text-4xl font-black oswald uppercase mb-2">Finalize <span class="lime-text">Identity</span></h2>
+        <p class="text-gray-500 font-bold">This branding will be visible to your customers.</p>
+    </div>
+    <div class="glass-card p-10 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 lime-bg"></div>
+        <form method="post">
+            <div class="grid md:grid-cols-2 gap-10">
+                <div class="space-y-6">
+                    <div>
+                        <label class="auth-label">Display Name</label>
+                        <input type="text" asp-for="MerchantName" id="merchantName" placeholder="e.g. Lime Coffee Shop" class="w-full p-4 rounded-xl font-bold" required>
+                    </div>
+                    <div>
+                        <label class="auth-label">Public Description</label>
+                        <textarea asp-for="Description" placeholder="Describe your service to customers..." class="w-full p-4 rounded-xl min-h-[140px] font-bold" required></textarea>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <label class="auth-label">Brand Logo URL</label>
+                        <input type="text" asp-for="LogoUrl" id="logoUrl" oninput="updatePreview()" placeholder="https://..." class="w-full p-4 rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="auth-label">Visual Verification</label>
+                        <div class="glass-card p-8 flex flex-col items-center text-center space-y-4 border-lime-primary/20 bg-lime-400/5">
+                            <div id="logoPreview" class="w-24 h-24 lime-bg rounded-[2rem] flex items-center justify-center overflow-hidden shadow-2xl ring-4 ring-black">
+                                <span class="text-black font-black text-3xl">L</span>
+                            </div>
+                            <div>
+                                <div class="font-black oswald uppercase text-lg" id="previewName">Merchant Preview</div>
+                                <div class="text-[10px] text-lime-400 font-black tracking-widest uppercase">Verified Checkout</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-10 pt-8 border-t border-white/5 flex justify-end">
+                <button type="submit" class="btn-lime px-12 py-5 rounded-2xl shadow-2xl text-lg">Submit Application</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function updatePreview() {
+            const url = document.getElementById('logoUrl').value;
+            const preview = document.getElementById('logoPreview');
+            const nameInput = document.getElementById('merchantName');
+            const previewName = document.getElementById('previewName');
+            
+            if (url) {
+                preview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\'text-black font-black text-3xl\'>L</span>'">`;
+            } else {
+                preview.innerHTML = `<span class="text-black font-black text-3xl">L</span>`;
+            }
+            
+            if (nameInput) {
+                nameInput.addEventListener('input', function() {
+                    previewName.textContent = this.value || 'Merchant Preview';
+                });
+            }
+        }
+    </script>
+}

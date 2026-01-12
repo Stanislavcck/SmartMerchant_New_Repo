@@ -1,0 +1,70 @@
+@page
+@model TermsModel
+@{
+    ViewData["Title"] = "Terms of Service";
+}
+
+<div class="mt-12 max-w-5xl mx-auto">
+    <div class="mb-12">
+        <h2 class="text-5xl font-black oswald uppercase mb-2">Terms of <span class="lime-text">Service</span></h2>
+        <p class="text-gray-500 font-black text-sm uppercase tracking-widest">Global Merchant Agreement v1.1.9 | Effective January 2026</p>
+    </div>
+    <div class="glass-card p-8 md:p-12 legal-content text-[10px] md:text-xs">
+        <div class="legal-scroll-box">
+            <h4>1. BINDING CONTRACTUAL NATURE</h4>
+            <p>This Global Merchant Agreement ("Agreement") is a legally binding contract between the entity registering the account ("Merchant") and Lime Merchant ("Provider"). By completing the registration process, you acknowledge that you have read, understood, and agreed to be bound by every clause contained herein. This agreement supersedes all prior oral or written communications.</p>
+            
+            <h4>2. ELIGIBILITY AND ACCOUNT SECURITY</h4>
+            <p>Services are restricted to registered legal entities and Physical Person-Entrepreneurs (FOP). Merchants must maintain the confidentiality of their API keys and dashboard credentials. All actions performed under an authenticated session are the sole liability of the Merchant.</p>
+            
+            <h4>3. ACQUIRING AND PROCESSING SERVICES</h4>
+            <p>Lime Merchant provides the gateway, technical processing, and aggregation services required to capture payments from Cardholders. We act as an intermediary between the Merchant and the Acquiring Bank. The Provider does not guarantee uninterrupted service and is not liable for network failures within the global financial grid.</p>
+            
+            <h4>4. FEE STRUCTURE AND TRANSACTION COSTS</h4>
+            <p>A non-negotiable processing fee of 3.99% is applied to the gross value of every successful transaction. This fee is "deducted at source" before funds reach the Merchant's settlement account. These fees cover authorization, gateway maintenance, and risk management. Chargeback fees are billed separately at ₴750.00 per occurrence.</p>
+            
+            <h4>5. SETTLEMENT AND PAYOUT CYCLES</h4>
+            <p>Standard settlement follows a T+1 (Transaction day + 1 business day) schedule. Payouts are executed via SEPA, SWIFT, or local inter-bank transfers. Provider reserves the right to delay settlements in the event of suspected fraud, high velocity of transactions, or technical audits.</p>
+            
+            <h4>6. COMPULSORY RESERVE ACCOUNTS</h4>
+            <p>To mitigate risk, Lime Merchant may implement a Rolling Reserve (typically 10% for 180 days). These funds are held in a non-interest-bearing escrow account to cover potential chargebacks and refunds. The reserve percentage may be increased without notice based on merchant performance.</p>
+            
+            <h4>7. CHARGEBACK LIABILITY AND INDEMNIFICATION</h4>
+            <p>Merchants assume 100% financial liability for all chargebacks, regardless of the reason for the dispute. You agree to maintain sufficient liquidity in your Lime account to satisfy all potential dispute claims. Failure to do so grants Lime the right to debit your linked external bank accounts.</p>
+            
+            <h4>8. REFUND OBLIGATIONS</h4>
+            <p>Merchants must maintain a clear and accessible refund policy for end-users. Refunds must be processed exclusively through the Lime Merchant platform to maintain the integrity of the transactional audit trail. Processing fees on the original transaction are non-refundable.</p>
+            
+            <h4>9. PROHIBITED AND RESTRICTED CATEGORIES</h4>
+            <p>Lime Merchant strictly prohibits the sale of: (a) Illegal substances; (b) Unlicensed pharmaceuticals; (c) High-risk financial speculation; (d) Adult content involving non-consenting parties; and (e) Weapons or unlicensed ammunition. Violation results in immediate account seizure and reporting to the FIU.</p>
+            
+            <h4>10. INTELLECTUAL PROPERTY RIGHTS</h4>
+            <p>All software, brand elements (including the "Lime" name and lime-green palette), and dashboard interfaces remain the exclusive property of Lime Merchant. Merchants are granted a limited, revocable license to use Lime-branded checkout assets for the duration of this agreement.</p>
+            
+            <h4>11. CONFIDENTIALITY AND NON-DISCLOSURE</h4>
+            <p>Both parties agree to protect the "Confidential Information" of the other. This includes fee schedules, API documentation, and cardholder data. Disclosure is only permitted under legal compulsion or for the performance of financial audits.</p>
+            
+            <h4>12. INDEMNIFICATION CLAUSE</h4>
+            <p>The Merchant agrees to indemnify, defend, and hold harmless Lime Merchant and its directors from any claims, damages, or losses arising from: (1) Misuse of the API; (2) Data breaches on the Merchant's side; or (3) Violations of consumer protection laws.</p>
+            
+            <h4>13. LIMITATION OF LIABILITY (CAP)</h4>
+            <p>IN NO EVENT SHALL LIME MERCHANT'S TOTAL LIABILITY EXCEED THE TOTAL FEES PAID BY THE MERCHANT IN THE SIX (6) MONTHS PRECEDING THE CLAIM. WE ARE NOT LIABLE FOR LOST PROFITS OR BUSINESS DISRUPTIONS RESULTING FROM GATEWAY DOWNTIME.</p>
+            
+            <h4>14. SUSPENSION AND TERMINATION</h4>
+            <p>Either party may terminate this agreement with thirty (30) days' written notice. Lime Merchant reserves the right to suspend accounts immediately if a Merchant's chargeback ratio exceeds 1% or if fraudulent activity is detected by our risk engine.</p>
+            
+            <h4>15. FORCE MAJEURE</h4>
+            <p>Neither party is liable for failure to perform due to events beyond reasonable control, including but not limited to: Acts of God, war, cyber-warfare against national infrastructure, or failure of global telecommunication backbones.</p>
+            
+            <h4>16. DISPUTE RESOLUTION AND ARBITRATION</h4>
+            <p>All disputes shall first be subject to a thirty (30) day mediation period. If unresolved, disputes shall be settled via binding arbitration in the Commercial Courts of Kyiv, Ukraine, under the rules of the International Chamber of Commerce.</p>
+            
+            <h4>17. AMENDMENTS TO TERMS</h4>
+            <p>Lime Merchant may update these terms at any time. Continued use of the platform after notification of changes constitutes acceptance of the new terms. Significant changes will be communicated via the Merchant Dashboard and Registered Email.</p>
+            
+            <h4>18. GOVERNING LAW</h4>
+            <p>This agreement is governed by and construed in accordance with the laws of Ukraine, without regard to conflict of law principles. The United Nations Convention on Contracts for the International Sale of Goods is specifically excluded.</p>
+        </div>
+    </div>
+</div>
+

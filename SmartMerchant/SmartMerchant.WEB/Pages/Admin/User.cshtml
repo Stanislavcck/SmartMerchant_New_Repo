@@ -1,0 +1,186 @@
+@page
+@model SmartMerchant.WEB.Pages.Admin.UserModel
+@{
+    ViewData["Title"] = "User Settings";
+    ViewData["ActivePage"] = "user";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    @await Html.PartialAsync("_DashboardHeader")
+
+    <div class="pt-24 pb-12 px-6 w-full max-w-full">
+        <div class="flex flex-col lg:flex-row gap-8">
+            @await Html.PartialAsync("_AdminSidebar")
+
+            <!-- Main Content -->
+            <div class="flex-grow">
+                <div class="space-y-8 max-w-4xl">
+                    <div>
+                        <h2 class="text-3xl font-black oswald uppercase">User <span class="lime-text">Settings</span></h2>
+                        <p class="text-gray-500 font-bold text-sm uppercase tracking-widest">Manage your personal account and security</p>
+                    </div>
+
+                    <div class="glass-card p-10 space-y-10 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-8 opacity-10">
+                            <svg class="w-32 h-32 text-lime-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="auth-label">First Name</label>
+                                    <input type="text" id="firstName" class="w-full p-4 rounded-xl font-bold" placeholder="First Name">
+                                </div>
+                                <div>
+                                    <label class="auth-label">Last Name</label>
+                                    <input type="text" id="lastName" class="w-full p-4 rounded-xl font-bold" placeholder="Last Name">
+                                </div>
+                                <div>
+                                    <label class="auth-label">Middle Name (Optional)</label>
+                                    <input type="text" id="middleName" class="w-full p-4 rounded-xl font-bold" placeholder="Middle Name">
+                                </div>
+                            </div>
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="auth-label">Username</label>
+                                    <input type="text" id="username" class="w-full p-4 rounded-xl font-bold" placeholder="Username">
+                                </div>
+                                <div>
+                                    <label class="auth-label">Change Password</label>
+                                    <input type="password" id="newPassword" placeholder="New Password" class="w-full p-4 rounded-xl font-bold">
+                                </div>
+                                <div>
+                                    <label class="auth-label">Confirm Password</label>
+                                    <input type="password" id="confirmPassword" placeholder="Confirm" class="w-full p-4 rounded-xl font-bold">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-6 border-t border-white/5 flex flex-col md:flex-row md:items-center justify-end gap-6">
+                            <button onclick="updateUser()" class="btn-lime px-12 py-4 rounded-xl shadow-xl">Update Account</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        function getToken() {
+            return localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+        }
+
+        async function loadUserData() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/authorization/user', {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const user = data.user;
+                    document.getElementById('firstName').value = user.firstName || '';
+                    document.getElementById('lastName').value = user.lastName || '';
+                    document.getElementById('middleName').value = user.middleName || '';
+                    document.getElementById('username').value = user.username || '';
+                } else {
+                    console.error('Failed to load user:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+        }
+
+        async function updateUser() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const middleName = document.getElementById('middleName').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Update profile
+            try {
+                const response = await fetch('/api/authorization/user', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        firstName: firstName || null,
+                        lastName: lastName || null,
+                        middleName: middleName || null,
+                        username: username || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert(data.message || 'Failed to update profile');
+                    return;
+                }
+
+                // If password is provided, change it
+                if (newPassword) {
+                    if (newPassword.length < 12) {
+                        alert('Password must be at least 12 characters');
+                        return;
+                    }
+
+                    if (newPassword !== confirmPassword) {
+                        alert('Passwords do not match');
+                        return;
+                    }
+
+                    // For password change, we need current password - for now, skip if not provided
+                    // In a real app, you'd ask for current password
+                    alert('Profile updated successfully! Note: Password change requires current password verification.');
+                } else {
+                    alert('Profile updated successfully!');
+                }
+
+                // Clear password fields
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            } catch (error) {
+                console.error('Error updating user:', error);
+                alert('An error occurred while updating your profile');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+        });
+    </script>
+</body>
+</html>
+

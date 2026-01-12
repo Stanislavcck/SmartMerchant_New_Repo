@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36518.9
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartMerchant.WEB", "SmartMerchant.WEB\SmartMerchant.WEB.csproj", "{223A52CC-D6C6-4A93-B127-3CC4937F2530}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartMerchant.Domain", "SmartMerchant.Domain\SmartMerchant.Domain.csproj", "{96A4F0A3-5BBA-40E9-B466-52E760A73270}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartMerchant.Application", "SmartMerchant.Application\SmartMerchant.Application.csproj", "{0716CDF0-2D88-487B-BBE0-89F77F4DCBA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartMerchant.Tests", "SmartMerchant.Tests\SmartMerchant.Tests.csproj", "{1CE11123-81C0-4642-B660-4CBC655C7C80}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		.dockerignore = .dockerignore
+		.gitignore = .gitignore
+		.vagrant-requirements.md = .vagrant-requirements.md
+		baget.env = baget.env
+		clean-up.bat = clean-up.bat
+		docker-compose.yml = docker-compose.yml
+		NuGet.Config = NuGet.Config
+		publish-to-baget.bat = publish-to-baget.bat
+		vagrant-clean.bat = vagrant-clean.bat
+		Vagrantfile = Vagrantfile
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{223A52CC-D6C6-4A93-B127-3CC4937F2530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{223A52CC-D6C6-4A93-B127-3CC4937F2530}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{223A52CC-D6C6-4A93-B127-3CC4937F2530}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{223A52CC-D6C6-4A93-B127-3CC4937F2530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96A4F0A3-5BBA-40E9-B466-52E760A73270}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96A4F0A3-5BBA-40E9-B466-52E760A73270}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96A4F0A3-5BBA-40E9-B466-52E760A73270}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96A4F0A3-5BBA-40E9-B466-52E760A73270}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0716CDF0-2D88-487B-BBE0-89F77F4DCBA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0716CDF0-2D88-487B-BBE0-89F77F4DCBA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0716CDF0-2D88-487B-BBE0-89F77F4DCBA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0716CDF0-2D88-487B-BBE0-89F77F4DCBA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CE11123-81C0-4642-B660-4CBC655C7C80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CE11123-81C0-4642-B660-4CBC655C7C80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CE11123-81C0-4642-B660-4CBC655C7C80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CE11123-81C0-4642-B660-4CBC655C7C80}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {003470A1-2204-427F-96CC-27FCF1F295C7}
+	EndGlobalSection
+EndGlobal

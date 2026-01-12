@@ -1,0 +1,337 @@
+@page "/Invoice/{guid}"
+@model SmartMerchant.WEB.Pages.Invoice.IndexModel
+@{
+    ViewData["Title"] = "Payment";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    <div class="pt-24 pb-12 px-6 w-full">
+        <div class="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+            <!-- Merchant Branding -->
+            <div class="space-y-8">
+                <div class="glass-card p-10 flex flex-col items-center text-center space-y-6 border-lime-primary/20">
+                    <div id="checkoutMerchantLogo" class="w-32 h-32 lime-bg rounded-[3rem] shadow-2xl flex items-center justify-center overflow-hidden ring-4 ring-black">
+                        <span class="text-black font-black text-4xl">L</span>
+                    </div>
+                    <div>
+                        <h2 id="checkoutMerchantName" class="text-4xl font-black oswald uppercase">Lime Merchant</h2>
+                        <p id="checkoutMerchantDesc" class="text-gray-400 font-bold max-w-xs mt-2">Verified Business Partner</p>
+                    </div>
+                    <div class="w-full pt-6 border-t border-white/5">
+                        <span class="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em]">Secure Lime Gateway</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Details & Form -->
+            <div class="space-y-8">
+                <div class="glass-card p-10 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 lime-bg"></div>
+                    <div class="flex justify-between items-start mb-10">
+                        <div>
+                            <span class="auth-label">Invoice ID</span>
+                            <div id="payInvoiceId" class="text-gray-400 font-black text-xs">Loading...</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="auth-label">Order No.</span>
+                            <div id="payInvoiceNum" class="oswald font-black text-xl">#INV-000</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-10">
+                        <span class="auth-label">Sum to Pay</span>
+                        <div id="payAmount" class="text-6xl font-black oswald lime-text leading-none">₴ 0.00</div>
+                        <p id="payDesc" class="text-gray-400 font-bold mt-4 italic text-sm">Loading...</p>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="auth-label">First Name</label>
+                                <input type="text" id="firstName" placeholder="Ivan" class="w-full p-4 rounded-xl font-bold">
+                            </div>
+                            <div>
+                                <label class="auth-label">Last Name</label>
+                                <input type="text" id="lastName" placeholder="Petrenko" class="w-full p-4 rounded-xl font-bold">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="auth-label">Card Number</label>
+                            <input type="text" id="cardNumberInput" placeholder="0000 0000 0000 0000" maxlength="19" class="w-full p-4 rounded-xl font-bold tracking-[0.2em]">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="auth-label">Expiry Date</label>
+                                <input type="text" id="expiryDate" placeholder="MM/YY" maxlength="5" class="w-full p-4 rounded-xl font-bold">
+                            </div>
+                            <div>
+                                <label class="auth-label">CVV</label>
+                                <input type="password" id="cvv" placeholder="***" maxlength="3" class="w-full p-4 rounded-xl font-bold">
+                            </div>
+                        </div>
+                        <button id="payButton" onclick="processPayment()" class="btn-lime w-full py-5 rounded-2xl shadow-2xl text-xl group">
+                            <span id="payBtnText" class="flex items-center justify-center space-x-3">Authorize Payment</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal-overlay">
+        <div class="glass-card p-8 w-full max-w-sm text-center border-red-500/30">
+            <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </div>
+            <h3 class="text-xl font-black oswald uppercase mb-2">Payment Declined</h3>
+            <p id="errorMessage" class="text-gray-400 font-bold mb-6">Insufficient funds in the provided card account.</p>
+            <button onclick="closeModal('errorModal')" class="w-full py-4 bg-red-500 text-white font-bold rounded-xl">Try Another Card</button>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        const invoiceGuid = '@Model.Guid';
+        let invoiceData = null;
+        let merchantData = null;
+
+        async function loadInvoiceData() {
+            try {
+                const response = await fetch(`/api/invoice/${invoiceGuid}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    invoiceData = data.invoice;
+                    
+                    // Check if already paid
+                    if (invoiceData.isPaid) {
+                        window.location.href = `/Invoice/Cheque/${invoiceGuid}`;
+                        return;
+                    }
+
+                    // Load merchant data if merchantGuid is available
+                    if (invoiceData.merchantGuid) {
+                        await loadMerchantData(invoiceData.merchantGuid);
+                    }
+
+                    // Update UI
+                    document.getElementById('payInvoiceId').textContent = invoiceGuid.substring(0, 13).toUpperCase();
+                    document.getElementById('payInvoiceNum').textContent = `#${invoiceData.number}`;
+                    document.getElementById('payAmount').textContent = `₴ ${parseFloat(invoiceData.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    document.getElementById('payDesc').textContent = invoiceData.description || 'No description';
+                } else {
+                    alert('Invoice not found');
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+                alert('Failed to load invoice');
+            }
+        }
+
+        async function loadMerchantData(merchantGuid) {
+            try {
+                const token = localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+                const response = await fetch(`/api/merchant?guid=${merchantGuid}`, {
+                    headers: token ? { 'Authorization': token } : {}
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    merchantData = data.merchant;
+                    document.getElementById('checkoutMerchantName').textContent = merchantData.name;
+                    document.getElementById('checkoutMerchantDesc').textContent = merchantData.description || 'Verified Business Partner';
+                    
+                    if (merchantData.logoUrl) {
+                        document.getElementById('checkoutMerchantLogo').innerHTML = `<img src="${merchantData.logoUrl}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\'text-black font-black text-4xl\'>L</span>'">`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading merchant:', error);
+            }
+        }
+
+        function formatCardNumber(value) {
+            const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            const matches = v.match(/\d{4,16}/g);
+            const match = matches && matches[0] || '';
+            const parts = [];
+            for (let i = 0, len = match.length; i < len; i += 4) {
+                parts.push(match.substring(i, i + 4));
+            }
+            if (parts.length) {
+                return parts.join(' ');
+            } else {
+                return v;
+            }
+        }
+
+        function formatExpiryDate(value) {
+            const v = value.replace(/\D/g, '');
+            if (v.length >= 2) {
+                return v.substring(0, 2) + '/' + v.substring(2, 4);
+            }
+            return v;
+        }
+
+        document.getElementById('cardNumberInput').addEventListener('input', function(e) {
+            e.target.value = formatCardNumber(e.target.value);
+        });
+
+        document.getElementById('expiryDate').addEventListener('input', function(e) {
+            e.target.value = formatExpiryDate(e.target.value);
+        });
+
+        document.getElementById('cvv').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        async function processPayment() {
+            const cardNum = document.getElementById('cardNumberInput').value.replace(/\s/g, '');
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const expiry = document.getElementById('expiryDate').value.trim();
+            const cvv = document.getElementById('cvv').value.trim();
+
+            if (!firstName || !lastName) {
+                alert('Please enter your first and last name');
+                return;
+            }
+
+            if (cardNum.length < 16) {
+                alert('Please enter a valid card number');
+                return;
+            }
+
+            if (!expiry || expiry.length < 5) {
+                alert('Please enter a valid expiry date');
+                return;
+            }
+
+            if (!cvv || cvv.length < 3) {
+                alert('Please enter a valid CVV');
+                return;
+            }
+
+            const btn = document.getElementById('payButton');
+            const btnText = document.getElementById('payBtnText');
+            
+            btn.disabled = true;
+            const originalContent = btnText.innerHTML;
+            const originalClasses = btnText.className;
+            btnText.className = 'flex items-center justify-center';
+            btnText.innerHTML = '<div class="spinner"></div>';
+
+            // Add delay before payment request (5-10 seconds)
+            const delay = Math.floor(Math.random() * 5000) + 5000; // Random between 5000-10000ms
+
+            try {
+                // Wait for the delay
+                await new Promise(resolve => setTimeout(resolve, delay));
+
+                const response = await fetch('/api/payment/pay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        invoiceGuid: invoiceGuid,
+                        cardNumber: cardNum,
+                        firstName: firstName,
+                        lastName: lastName,
+                        expiryDate: expiry,
+                        cvv: cvv
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    btnText.className = 'flex items-center justify-center space-x-3';
+                    btnText.innerHTML = '<svg class="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-black font-black">LIME</span>';
+                    btn.classList.add('bg-white');
+                    
+                    setTimeout(() => {
+                        window.location.href = `/Invoice/Cheque/${invoiceGuid}`;
+                    }, 1000);
+                } else {
+                    btn.classList.add('shake-btn');
+                    btnText.innerHTML = '<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>';
+                    
+                    // Display error based on error code
+                    let errorMessage = data.message || 'Payment declined. Please try another card.';
+                    if (data.error === 'INSUFFICIENT_FUNDS') {
+                        errorMessage = data.message || 'Insufficient funds in the provided card account.';
+                    } else if (data.error === 'UNAUTHORIZED') {
+                        errorMessage = data.message || 'Card authentication failed. Please check your card details.';
+                    }
+                    
+                    document.getElementById('errorMessage').textContent = errorMessage;
+                    openModal('errorModal');
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.classList.remove('shake-btn');
+                        btnText.innerHTML = originalContent;
+                    }, 1500);
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                btn.disabled = false;
+                btnText.innerHTML = originalContent;
+                alert('An error occurred during payment processing');
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadInvoiceData();
+        });
+    </script>
+    <style>
+        .spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-top: 3px solid #000;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+        }
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @@keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .shake-btn {
+            animation: shake 0.2s ease-in-out 0s 2;
+            background-color: #ef4444 !important;
+            color: white !important;
+        }
+    </style>
+</body>
+</html>
+

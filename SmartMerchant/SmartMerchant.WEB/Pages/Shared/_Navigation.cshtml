@@ -1,0 +1,62 @@
+<nav class="fixed top-0 w-full z-50 px-6 py-4 flex justify-between items-center glass-card border-none rounded-none bg-opacity-80 backdrop-blur-md">
+    <div class="flex items-center space-x-2 cursor-pointer">
+        <a asp-page="/Index" class="flex items-center space-x-2">
+            <div class="w-10 h-10 lime-bg rounded-xl flex items-center justify-center">
+                <span class="text-black font-black text-xl">L</span>
+            </div>
+            <span class="fancy-nav text-2xl tracking-wider lime-text">LIME MERCHANT</span>
+        </a>
+    </div>
+    <div class="hidden md:flex space-x-8 font-semibold uppercase text-sm tracking-widest">
+        <a asp-page="/Features" class="hover:lime-text transition">Features</a>
+        <a asp-page="/Pricing" class="hover:lime-text transition">Pricing</a>
+    </div>
+    <div class="flex items-center space-x-4" id="navAuthButtons">
+        <a asp-page="/Login" class="text-white hover:lime-text font-bold nav-login">Log In</a>
+        <a asp-page="/Register" class="btn-lime px-6 py-2 rounded-full text-sm nav-register">Join Now</a>
+        <a asp-page="/Admin/Main" class="text-white hover:lime-text font-bold nav-admin hidden">Admin</a>
+        <a href="#" id="logoutLink" class="text-white hover:lime-text font-bold nav-logout hidden">Logout</a>
+    </div>
+    <script>
+        (function() {
+            const token = localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+            if (token) {
+                const loginLink = document.querySelector('.nav-login');
+                const registerLink = document.querySelector('.nav-register');
+                const adminLink = document.querySelector('.nav-admin');
+                const logoutLink = document.getElementById('logoutLink');
+                
+                if (loginLink) loginLink.classList.add('hidden');
+                if (registerLink) registerLink.classList.add('hidden');
+                if (adminLink) adminLink.classList.remove('hidden');
+                if (logoutLink) {
+                    logoutLink.classList.remove('hidden');
+                    logoutLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        
+                        // Call logout API
+                        fetch('/api/authorization/logout', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include'
+                        }).then(() => {
+                            // Clear local storage and cookie
+                            localStorage.removeItem('authToken');
+                            document.cookie = 'authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                            window.location.href = '/';
+                        }).catch(() => {
+                            // Even if API call fails, clear local storage and redirect
+                            localStorage.removeItem('authToken');
+                            document.cookie = 'authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                            window.location.href = '/';
+                        });
+                    });
+                }
+            }
+        })();
+    </script>
+</nav>
+

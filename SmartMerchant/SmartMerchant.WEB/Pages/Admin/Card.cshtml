@@ -1,0 +1,447 @@
+@page
+@model SmartMerchant.WEB.Pages.Admin.CardModel
+@{
+    ViewData["Title"] = "Mock Cards";
+    ViewData["ActivePage"] = "cards";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Lime Merchant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col">
+    @await Html.PartialAsync("_DashboardHeader")
+
+    <div class="pt-24 pb-12 px-6 w-full max-w-full">
+        <div class="flex flex-col lg:flex-row gap-8">
+            @await Html.PartialAsync("_AdminSidebar")
+
+            <!-- Main Content -->
+            <div class="flex-grow">
+                <div class="space-y-8">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-black oswald uppercase">Mock <span class="lime-text">Cards</span></h2>
+                        <button onclick="openCardModal()" class="btn-lime px-8 py-3 rounded-xl text-sm font-black shadow-xl">Issue Test Card</button>
+                    </div>
+
+                    <div class="glass-card p-8">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="border-b border-white/10">
+                                    <tr class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                        <th class="pb-4 pr-4">Holder</th>
+                                        <th class="pb-4 pr-4">Number</th>
+                                        <th class="pb-4 pr-4">Expiration</th>
+                                        <th class="pb-4 pr-4">Balance</th>
+                                        <th class="pb-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cardsTableBody" class="text-sm font-bold">
+                                    <!-- Data populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Create/Edit Modal -->
+    <div id="cardModal" class="modal-overlay">
+        <div class="glass-card p-8 w-full max-w-md border-lime-primary/30">
+            <h3 id="cardModalTitle" class="text-2xl font-black oswald uppercase mb-6">Issue <span class="lime-text">Test Card</span></h3>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="cardFirstName" placeholder="First Name" class="w-full p-4 rounded-xl font-bold">
+                    <input type="text" id="cardLastName" placeholder="Last Name" class="w-full p-4 rounded-xl font-bold">
+                </div>
+                <input type="text" id="cardNumber" placeholder="Card Number" maxlength="19" class="w-full p-4 rounded-xl font-bold">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5" class="w-full p-4 rounded-xl font-bold">
+                    <input type="text" id="cardCvv" placeholder="CVV" maxlength="3" class="w-full p-4 rounded-xl font-bold">
+                </div>
+                <input type="number" id="cardBalance" placeholder="Initial Balance (UAH)" step="0.01" class="w-full p-4 rounded-xl font-bold">
+                <div class="flex space-x-4 pt-4">
+                    <button onclick="closeModal('cardModal')" class="flex-1 py-4 rounded-xl font-bold bg-white/5">Cancel</button>
+                    <button onclick="handleCardSubmit()" id="cardSubmitBtn" class="flex-1 py-4 btn-lime rounded-xl">Save Card</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card View Modal -->
+    <div id="cardViewModal" class="modal-overlay">
+        <div class="glass-card p-10 w-full max-w-sm border-lime-primary/30 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-lime-400/5 rounded-full blur-3xl"></div>
+            <div class="lime-card aspect-[1.6/1] rounded-2xl p-6 text-black mb-8 relative">
+                <div class="text-xs font-black uppercase mb-1 opacity-60">Mock Test Card</div>
+                <div id="vCardNumber" class="text-xl font-black tracking-widest oswald mb-6">0000 0000 0000 0000</div>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <div class="text-[8px] font-black uppercase opacity-60">Holder</div>
+                        <div id="vCardHolder" class="font-black text-sm uppercase">NAME SURNAME</div>
+                    </div>
+                    <div>
+                        <div class="text-[8px] font-black uppercase opacity-60">Expires</div>
+                        <div id="vCardExpiry" class="font-black text-sm">MM/YY</div>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-gray-500 text-xs font-black uppercase">Balance</span>
+                    <span id="vCardBalance" class="lime-text font-black">₴ 0.00</span>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-gray-500 text-xs font-black uppercase">CVV</span>
+                    <span id="vCardCvv" class="font-black">***</span>
+                </div>
+            </div>
+            <button onclick="closeModal('cardViewModal')" class="w-full mt-8 py-4 bg-white/5 border border-white/10 rounded-xl font-bold">Close</button>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        let editingCardGuid = null;
+
+        function getToken() {
+            return localStorage.getItem('authToken') || document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+        }
+
+        function formatCardNumber(value) {
+            const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            const matches = v.match(/\d{4,16}/g);
+            const match = matches && matches[0] || '';
+            const parts = [];
+            for (let i = 0, len = match.length; i < len; i += 4) {
+                parts.push(match.substring(i, i + 4));
+            }
+            if (parts.length) {
+                return parts.join(' ');
+            } else {
+                return v;
+            }
+        }
+
+        function formatExpiryDate(value) {
+            const v = value.replace(/\D/g, '');
+            if (v.length >= 2) {
+                return v.substring(0, 2) + '/' + v.substring(2, 4);
+            }
+            return v;
+        }
+
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+            e.target.value = formatCardNumber(e.target.value);
+        });
+
+        document.getElementById('cardExpiry').addEventListener('input', function(e) {
+            e.target.value = formatExpiryDate(e.target.value);
+        });
+
+        document.getElementById('cardCvv').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        async function loadCards() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/card', {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    renderCards(data.cards);
+                } else {
+                    console.error('Failed to load cards:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading cards:', error);
+            }
+        }
+
+        function renderCards(cards) {
+            const body = document.getElementById('cardsTableBody');
+            body.innerHTML = '';
+
+            if (cards.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-gray-500 font-bold">No cards found</td></tr>';
+                return;
+            }
+
+            cards.forEach(card => {
+                body.innerHTML += `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td class="py-4 pr-4 text-gray-300 uppercase">${card.holderFirstName} ${card.holderLastName}</td>
+                        <td class="py-4 pr-4 font-mono text-gray-500">${card.number}</td>
+                        <td class="py-4 pr-4 text-gray-500">${card.expiry}</td>
+                        <td class="py-4 pr-4 lime-text">₴ ${parseFloat(card.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="py-4">
+                            <div class="flex space-x-2">
+                                <button onclick="viewCard('${card.guid}')" class="p-2 bg-white/5 rounded-lg hover:bg-lime-400/20" title="View">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
+                                <button onclick="editCard('${card.guid}')" class="p-2 bg-white/5 rounded-lg hover:bg-blue-400/20" title="Edit">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072"/></svg>
+                                </button>
+                                <button onclick="deleteCard('${card.guid}')" class="p-2 bg-white/5 rounded-lg hover:bg-red-500/20" title="Delete">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function openCardModal() {
+            editingCardGuid = null;
+            document.getElementById('cardModalTitle').innerHTML = 'Issue <span class="lime-text">Test Card</span>';
+            document.getElementById('cardFirstName').value = '';
+            document.getElementById('cardLastName').value = '';
+            document.getElementById('cardNumber').value = '';
+            document.getElementById('cardExpiry').value = '';
+            document.getElementById('cardCvv').value = '';
+            document.getElementById('cardBalance').value = '';
+            openModal('cardModal');
+        }
+
+        async function handleCardSubmit() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            const firstName = document.getElementById('cardFirstName').value.trim();
+            const lastName = document.getElementById('cardLastName').value.trim();
+            const number = document.getElementById('cardNumber').value.replace(/\s/g, '');
+            const expiry = document.getElementById('cardExpiry').value.trim();
+            const cvv = document.getElementById('cardCvv').value.trim();
+            const balance = parseFloat(document.getElementById('cardBalance').value) || 0;
+
+            if (!firstName || !lastName) {
+                alert('First name and last name are required');
+                return;
+            }
+
+            if (!number || number.length < 13) {
+                alert('Valid card number is required');
+                return;
+            }
+
+            if (!expiry || expiry.length < 5) {
+                alert('Valid expiry date (MM/YY) is required');
+                return;
+            }
+
+            if (!cvv || cvv.length < 3) {
+                alert('Valid CVV is required');
+                return;
+            }
+
+            const btn = document.getElementById('cardSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner mx-auto"></div>';
+
+            try {
+                let response;
+                if (editingCardGuid) {
+                    response = await fetch(`/api/card/edit/${editingCardGuid}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            holderFirstName: firstName,
+                            holderLastName: lastName,
+                            number: number,
+                            expiry: expiry,
+                            cvv: cvv,
+                            balance: balance
+                        })
+                    });
+                } else {
+                    response = await fetch('/api/card/create', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            holderFirstName: firstName,
+                            holderLastName: lastName,
+                            number: number,
+                            expiry: expiry,
+                            cvv: cvv,
+                            balance: balance
+                        })
+                    });
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    closeModal('cardModal');
+                    loadCards();
+                } else {
+                    alert(data.message || 'Failed to save card');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Save Card';
+                }
+            } catch (error) {
+                console.error('Error saving card:', error);
+                alert('An error occurred while saving the card');
+                btn.disabled = false;
+                btn.innerHTML = 'Save Card';
+            }
+        }
+
+        async function editCard(guid) {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/card/${guid}`, {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const card = data.card;
+                    editingCardGuid = guid;
+                    document.getElementById('cardModalTitle').innerHTML = 'Edit <span class="lime-text">Card Balance</span>';
+                    document.getElementById('cardFirstName').value = card.holderFirstName;
+                    document.getElementById('cardLastName').value = card.holderLastName;
+                    document.getElementById('cardNumber').value = card.number;
+                    document.getElementById('cardExpiry').value = card.expiry;
+                    document.getElementById('cardCvv').value = card.cvv;
+                    document.getElementById('cardBalance').value = card.balance;
+                    openModal('cardModal');
+                } else {
+                    alert(data.message || 'Failed to load card');
+                }
+            } catch (error) {
+                console.error('Error loading card:', error);
+                alert('An error occurred while loading the card');
+            }
+        }
+
+        async function viewCard(guid) {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/card/${guid}`, {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const card = data.card;
+                    document.getElementById('vCardNumber').textContent = card.number;
+                    document.getElementById('vCardHolder').textContent = `${card.holderFirstName} ${card.holderLastName}`;
+                    document.getElementById('vCardExpiry').textContent = card.expiry;
+                    document.getElementById('vCardCvv').textContent = card.cvv;
+                    document.getElementById('vCardBalance').textContent = `₴ ${parseFloat(card.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    openModal('cardViewModal');
+                } else {
+                    alert(data.message || 'Failed to load card');
+                }
+            } catch (error) {
+                console.error('Error loading card:', error);
+                alert('An error occurred while loading the card');
+            }
+        }
+
+        async function deleteCard(guid) {
+            if (!confirm("Permanently destroy this test card?")) {
+                return;
+            }
+
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/card/${guid}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    loadCards();
+                } else {
+                    alert(data.message || 'Failed to delete card');
+                }
+            } catch (error) {
+                console.error('Error deleting card:', error);
+                alert('An error occurred while deleting the card');
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCards();
+        });
+    </script>
+    <style>
+        .spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-top: 3px solid #000;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+        }
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>
+

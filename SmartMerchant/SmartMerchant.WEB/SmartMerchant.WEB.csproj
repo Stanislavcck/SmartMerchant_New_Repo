@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- NuGet Package Metadata -->
+    <PackageId>SmartMerchant.WEB</PackageId>
+    <Version>1.0.2</Version>
+    <Authors>SmartMerchant</Authors>
+    <Company>SmartMerchant</Company>
+    <Product>SmartMerchant Web Application</Product>
+    <Description>SmartMerchant payment processing platform web application</Description>
+    <PackageProjectUrl>https://github.com/smartmerchant/smartmerchant</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/smartmerchant/smartmerchant</RepositoryUrl>
+    <PackageTags>payment;merchant;invoice;aspnetcore</PackageTags>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <!-- Include all files needed to run the application -->
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.0" />
+    <PackageReference Include="Auth0.AspNetCore.Authentication" Version="1.6.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="6.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SmartMerchant.Application\SmartMerchant.Application.csproj" />
+  </ItemGroup>
+
+  <!-- Ensure lib/net9.0 and content directories exist -->
+  <Target Name="EnsurePackageDirectories" BeforeTargets="Pack">
+    <MakeDir Directories="$(OutputPath)lib\net9.0\" Condition="!Exists('$(OutputPath)lib\net9.0\')" />
+    <MakeDir Directories="$(OutputPath)content\" Condition="!Exists('$(OutputPath)content\')" />
+    <Message Text="Package will include files from: $(OutputPath)lib\net9.0\ and $(OutputPath)content\" Importance="high" />
+  </Target>
+  
+  <!-- Include ALL DLLs and runtime files from lib/net9.0 in the package -->
+  <ItemGroup>
+    <_LibFiles Include="$(OutputPath)lib\net9.0\*.dll" />
+    <_LibFiles Include="$(OutputPath)lib\net9.0\*.deps.json" />
+    <_LibFiles Include="$(OutputPath)lib\net9.0\*.runtimeconfig.json" />
+    <_LibFiles Include="$(OutputPath)lib\net9.0\*.pdb" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'@(_LibFiles)' != ''">
+    <None Include="@(_LibFiles)">
+      <Pack>true</Pack>
+      <PackagePath>lib/net9.0/%(Filename)%(Extension)</PackagePath>
+      <BuildAction>None</BuildAction>
+    </None>
+  </ItemGroup>
+  
+  <!-- Include ALL files from content directory (wwwroot, appsettings.json, etc.) -->
+  <ItemGroup>
+    <_ContentFiles Include="$(OutputPath)content\**\*" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'@(_ContentFiles)' != ''">
+    <None Include="@(_ContentFiles)">
+      <Pack>true</Pack>
+      <PackagePath>content/%(RecursiveDir)%(Filename)%(Extension)</PackagePath>
+      <BuildAction>None</BuildAction>
+    </None>
+  </ItemGroup>
+
+</Project>

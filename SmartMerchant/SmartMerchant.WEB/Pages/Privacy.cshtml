@@ -1,0 +1,60 @@
+﻿@page
+@model PrivacyModel
+@{
+    ViewData["Title"] = "Privacy Policy";
+}
+
+<div class="mt-12 max-w-5xl mx-auto">
+    <div class="mb-12">
+        <h2 class="text-5xl font-black oswald uppercase mb-2">Privacy <span class="lime-text">Policy</span></h2>
+        <p class="text-gray-500 font-black text-sm uppercase tracking-widest">Master Service Disclosure v2.4 | Effective January 2026</p>
+    </div>
+    <div class="glass-card p-8 md:p-12 legal-content text-[10px] md:text-xs">
+        <div class="legal-scroll-box">
+            <h4>1. INTRODUCTION AND SCOPE</h4>
+            <p>Lime Merchant ("Platform", "We", "Us") operates as a specialized financial technology provider and payment aggregator. This Privacy Policy serves as a comprehensive disclosure regarding the handling of Personally Identifiable Information (PII) and Merchant Transactional Data (MTD) collected through our services. We strictly adhere to the General Data Protection Regulation (GDPR), the Payment Card Industry Data Security Standard (PCI-DSS), and relevant national banking secrecy mandates.</p>
+            
+            <h4>2. DEFINITIONS OF COLLECTED DATA</h4>
+            <p>We classify data into three primary tiers: (i) Tier-1 Identification Data, including full legal nomenclature, tax resident status, and government identifiers; (ii) Tier-2 Financial Metadata, encompassing settlement account routing, IBAN structures, and beneficial ownership certificates; and (iii) Tier-3 Transactional Intelligence, which includes non-masked card identifiers, device fingerprinting, and geolocation telemetry.</p>
+            
+            <h4>3. MANDATORY KYC/KYB PROTOCOLS</h4>
+            <p>Under Anti-Money Laundering (AML) and Counter-Terrorist Financing (CTF) directives, we are legally compelled to verify the identity of every merchant. This involves the processing of high-resolution biometric data, corporate registration extracts, and verified physical address history. Failure to provide this data constitutes an immediate breach of service eligibility.</p>
+            
+            <h4>4. FINANCIAL TRANSACTION PROCESSING</h4>
+            <p>When a transaction occurs, we capture merchant-side metadata including inventory categories and ticket values. This data is utilized for liquidity management and risk-based underwriting. Financial data is strictly encrypted using hardware security modules (HSM) and is never accessible to unauthorized third parties.</p>
+            
+            <h4>5. TECHNICAL TELEMETRY AND FINGERPRINTING</h4>
+            <p>Our platform utilizes advanced browser fingerprinting and network telemetry to detect anomalous login patterns. This includes IP address analysis, browser engine signatures, and hardware-level identifiers. This processing is performed under the legal basis of "Legitimate Interest" to ensure platform security.</p>
+            
+            <h4>6. LEGAL BASIS FOR PROCESSING</h4>
+            <p>We process your data under several legal frameworks: (a) Performance of a Contract, to facilitate payouts; (b) Legal Obligation, for tax and AML reporting; and (c) Explicit Consent, for optional value-added services. You may withdraw consent at any time, though this may result in the limitation of specific financial features.</p>
+            
+            <h4>7. DATA RETENTION AND ARCHIVAL</h4>
+            <p>In accordance with financial regulatory standards, primary transaction records are retained in a state of 'hot-storage' for a period of twenty-four (24) months, followed by five (5) years of 'cold-archival' as mandated by banking audit requirements. Post-retention, all PII is cryptographically erased from all production and backup nodes.</p>
+            
+            <h4>8. THIRD-PARTY DATA DISCLOSURE</h4>
+            <p>We share necessary data subsets with: (1) Acquirer Banks, for fund settlement; (2) Card Networks (Visa/Mastercard), for authorization capture; and (3) Regulatory Agencies, upon valid subpoena. We do not engage in the sale or lease of merchant datasets to advertising conglomerates.</p>
+            
+            <h4>9. CROSS-BORDER DATA TRANSFERS</h4>
+            <p>Merchant data may be processed in secure data centers located within the European Economic Area (EEA) and Switzerland. All transfers are protected by Standard Contractual Clauses (SCCs) to ensure equivalent levels of data protection regardless of geographical location.</p>
+            
+            <h4>10. SECURITY STANDARDS (PCI-DSS LEVEL 1)</h4>
+            <p>Lime Merchant operates at the highest level of PCI-DSS compliance. Our infrastructure undergoes quarterly vulnerability scans and annual onsite audits by independent Qualified Security Assessors (QSAs). All sensitive payment data is tokenized immediately upon entry.</p>
+            
+            <h4>11. RIGHTS OF THE DATA SUBJECT</h4>
+            <p>Merchants hold the right to: (i) Access and portability of their datasets; (ii) Rectification of inaccurate financial records; (iii) Erasure of data not subject to mandatory regulatory retention; and (iv) Objection to automated risk-profiling mechanisms.</p>
+            
+            <h4>12. AUTOMATED DECISION MAKING (RISK SCORING)</h4>
+            <p>We employ automated algorithms to calculate merchant risk scores. These scores determine settlement cycles (T+0 vs T+1) and reserve requirements. Merchants have the right to request a manual review of any automated decision that significantly impacts their settlement status.</p>
+            
+            <h4>13. COOKIES AND LOCAL STORAGE</h4>
+            <p>Our dashboard utilizes essential session tokens and persistent security cookies. These are strictly necessary for the maintenance of an authenticated session and the prevention of Cross-Site Request Forgery (CSRF) attacks.</p>
+            
+            <h4>14. DATA BREACH NOTIFICATION</h4>
+            <p>In the unlikely event of a security compromise, Lime Merchant will notify affected merchants and relevant supervisory authorities within seventy-two (72) hours of discovery, detailing the nature of the compromise and recommended mitigation steps.</p>
+            
+            <h4>15. CONTACT AND COMPLIANCE OFFICER</h4>
+            <p>For inquiries regarding data protection, merchants may contact our Data Protection Officer (DPO) at compliance@lime-merchant.bank. Official correspondence must be signed with a verified electronic signature.</p>
+        </div>
+    </div>
+</div>

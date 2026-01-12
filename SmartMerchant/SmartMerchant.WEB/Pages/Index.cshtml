@@ -1,0 +1,67 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="grid lg:grid-cols-2 gap-12 items-center mt-12">
+    <div class="space-y-8">
+        <span class="inline-block py-1 px-3 rounded-full lime-bg text-black text-xs font-bold uppercase tracking-widest">Available in Ukraine 🇺🇦</span>
+        <h1 class="text-6xl md:text-8xl font-black oswald leading-none uppercase">
+            The Future of <br><span class="lime-text">Payments</span>
+        </h1>
+        <p class="text-gray-400 text-lg md:text-xl max-w-lg leading-relaxed font-bold">
+            No paperwork. No queues. Just pure lime-flavored commerce for the next generation of business owners.
+        </p>
+        
+        <!-- Money Counter -->
+        <div class="glass-card p-6 inline-block border-lime-primary/20">
+            <div class="text-gray-400 text-xs uppercase font-bold mb-1">Total Processed Today</div>
+            <div class="text-4xl font-black lime-text counter-glow" id="moneyCounter">₴ 4,520,103.00</div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row">
+            <a asp-page="/Register" class="btn-lime px-12 py-4 rounded-2xl text-lg shadow-xl text-center">Get Started Now</a>
+        </div>
+    </div>
+
+    <!-- Big Lime Card -->
+    <div class="relative flex justify-center items-center py-20">
+        <div class="absolute w-80 h-80 bg-lime-400/20 blur-[100px] rounded-full"></div>
+        <div class="lime-card w-full max-w-md aspect-[1.6/1] rounded-[32px] p-8 relative overflow-hidden" id="limeCard">
+            <div class="w-12 h-10 bg-black/10 rounded-lg mb-8 border border-white/20"></div>
+            <div class="space-y-1">
+                <div class="text-black/60 font-bold text-xs uppercase tracking-tighter">Business Elite</div>
+                <div class="text-black font-black text-2xl tracking-widest oswald">4242 0000 1337 2024</div>
+            </div>
+            <div class="absolute bottom-8 right-8 text-black font-black text-3xl fancy-nav">LIME</div>
+            <div class="absolute bottom-8 left-8 text-black/80 font-bold text-sm uppercase">YUNG MERCHANT</div>
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentAmount = 4520103.00;
+        const counterEl = document.getElementById('moneyCounter');
+        setInterval(() => {
+            currentAmount += Math.random() * 50;
+            counterEl.innerText = `₴ ${currentAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }, 3000);
+
+        const card = document.getElementById('limeCard');
+        if (card) {
+            document.addEventListener('mousemove', (e) => {
+                if (window.innerWidth < 1024) return;
+                const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+                const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+                card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+            });
+
+            document.addEventListener('mouseleave', () => {
+                card.style.transform = `rotateY(0deg) rotateX(0deg)`;
+            });
+        }
+    </script>
+}

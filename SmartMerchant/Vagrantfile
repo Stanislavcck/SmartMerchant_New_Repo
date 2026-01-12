@@ -1,0 +1,584 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  
+  # BaGet configuration - adjust if your BaGet is on a different host
+  BAGET_HOST = "192.168.56.1"  # Default host-only network gateway (adjust if needed)
+  BAGET_PORT = "5555"
+  BAGET_URL = "http://#{BAGET_HOST}:#{BAGET_PORT}/v3/index.json"
+  BAGET_API_KEY = "supersecret123"
+  PACKAGE_NAME = "SmartMerchant.WEB"
+  PACKAGE_VERSION = "1.0.2"
+  
+  # Ubuntu VM - Minimal Ubuntu Server
+  config.vm.define "ubuntu" do |ubuntu|
+    ubuntu.vm.box = "ubuntu/jammy64"
+    ubuntu.vm.box_version = "~> 20240131.0.0"
+    
+    # Minimal resources
+    ubuntu.vm.provider "virtualbox" do |vb|
+      vb.name = "SmartMerchant-Ubuntu"
+      vb.memory = "2048"
+      vb.cpus = 4
+      vb.gui = false
+    end
+    
+    # Network configuration - host-only to access host's BaGet
+    ubuntu.vm.network "private_network", ip: "192.168.56.10"
+    
+    # Forward port for web application
+    ubuntu.vm.network "forwarded_port", guest: 5000, host: 5000
+    
+    # Provision Ubuntu VM
+    ubuntu.vm.provision "shell", inline: <<-SHELL
+      set -e
+      
+      echo "========================================="
+      echo "  Setting up Ubuntu VM"
+      echo "========================================="
+      
+      # Update system
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get upgrade -y
+      
+      # Install prerequisites
+      apt-get install -y wget curl gnupg software-properties-common
+      
+      # Install .NET 9 SDK
+      echo "VM Updated - Installing .NET 9 SDK..."
+      wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+      chmod +x dotnet-install.sh
+      ./dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet
+      
+      # Create symlinks
+      ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+      
+      # Verify .NET installation
+      dotnet --version
+      
+      # Configure NuGet to use BaGet
+      echo "Configuring NuGet..."
+      mkdir -p ~/.nuget/NuGet
+      cat > ~/.nuget/NuGet/NuGet.Config <<'NUGETEOF'
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="BaGet" value="http://192.168.56.1:5555/v3/index.json" allowInsecureConnections="true" />
+  </packageSources>
+</configuration>
+NUGETEOF
+      
+      # Install unzip for package extraction
+      apt-get install -y unzip
+      
+      # Download and deploy the application from BaGet
+      echo "========================================="
+      echo "  Deploying SmartMerchant.WEB from BaGet"
+      echo "========================================="
+      
+      APP_DIR="/opt/smartmerchant"
+      mkdir -p "$APP_DIR"
+      cd "$APP_DIR"
+      
+      # Test connectivity to BaGet first
+      echo "Testing BaGet connectivity..."
+      BAGET_HOST="192.168.56.1"
+      if ! curl -f -s -o /dev/null -w "%{http_code}" "http://$BAGET_HOST:5555/v3/index.json" | grep -q "200"; then
+        echo "Trying alternative host IPs..."
+        # Try common VirtualBox host IPs
+        for HOST_IP in "10.0.2.2" "192.168.56.1" "192.168.33.1"; do
+          if curl -f -s -o /dev/null -w "%{http_code}" "http://$HOST_IP:5555/v3/index.json" | grep -q "200"; then
+            echo "Found BaGet at $HOST_IP:5555"
+            BAGET_HOST="$HOST_IP"
+            break
+          fi
+        done
+      fi
+      
+      echo "BaGet host: $BAGET_HOST:5555"
+      
+      # Use dotnet to download and cache the package
+      echo "Using dotnet to download package from BaGet..."
+      rm -rf /tmp/dotnet-restore
+      mkdir -p /tmp/dotnet-restore
+      cd /tmp/dotnet-restore
+      dotnet new web -n TempProj --force
+      cd TempProj
+      
+      # Configure NuGet to use BaGet (update existing config)
+      mkdir -p ~/.nuget/NuGet
+      cat > ~/.nuget/NuGet/NuGet.Config <<NUGETCFG
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="BaGet" value="http://$BAGET_HOST:5555/v3/index.json" allowInsecureConnections="true" />
+  </packageSources>
+</configuration>
+NUGETCFG
+      
+      # Add the package (this will download it to cache)
+      # This may fail due to missing dependencies, but package will be cached
+      echo "Adding package SmartMerchant.WEB version 1.0.2..."
+      dotnet add package SmartMerchant.WEB --version 1.0.2 || echo "Package add failed, but checking cache..."
+      
+      # Find the package in NuGet cache (it should be there even if add failed)
+      PACKAGE_CACHE="$HOME/.nuget/packages/smartmerchant.web/1.0.2"
+      if [ -d "$PACKAGE_CACHE" ]; then
+        echo "Found package in NuGet cache: $PACKAGE_CACHE"
+        echo "Package contents:"
+        ls -la "$PACKAGE_CACHE" | head -10
+        
+        # Copy everything from cache
+        echo "Copying package contents to application directory..."
+        cp -r "$PACKAGE_CACHE"/* "$APP_DIR/" 2>/dev/null || true
+        
+        # The DLL should be in lib/net9.0/ - copy it to root
+        if [ -d "$APP_DIR/lib/net9.0" ]; then
+          echo "Copying DLL and related files from lib/net9.0..."
+          cp "$APP_DIR/lib/net9.0"/*.dll "$APP_DIR/" 2>/dev/null || true
+          cp "$APP_DIR/lib/net9.0"/*.deps.json "$APP_DIR/" 2>/dev/null || true
+          cp "$APP_DIR/lib/net9.0"/*.runtimeconfig.json "$APP_DIR/" 2>/dev/null || true
+          cp "$APP_DIR/lib/net9.0"/*.pdb "$APP_DIR/" 2>/dev/null || true
+        fi
+        
+        # Also try to find the .nupkg file
+        NUPKG_FILE=$(find "$HOME/.nuget/packages" -name "SmartMerchant.WEB.1.0.2.nupkg" -o -name "smartmerchant.web.1.0.2.nupkg" 2>/dev/null | head -1)
+        if [ -n "$NUPKG_FILE" ] && [ -f "$NUPKG_FILE" ]; then
+          echo "Found .nupkg file: $NUPKG_FILE"
+          cp "$NUPKG_FILE" "$APP_DIR/SmartMerchant.WEB.1.0.2.nupkg"
+        fi
+      else
+        echo "ERROR: Package not found in cache at $PACKAGE_CACHE"
+        echo "Searching for package in NuGet cache..."
+        find "$HOME/.nuget/packages" -name "*smartmerchant*" -type d 2>/dev/null | head -5
+        exit 1
+      fi
+      
+      cd "$APP_DIR"
+      echo "✓ Found project folder: $APP_DIR"
+      
+      # Extract package if .nupkg file exists
+      if [ -f "SmartMerchant.WEB.1.0.2.nupkg" ] && [ -s "SmartMerchant.WEB.1.0.2.nupkg" ]; then
+        echo "Extracting package..."
+        unzip -q SmartMerchant.WEB.1.0.2.nupkg -d package-extracted 2>/dev/null || {
+          echo "Package extraction failed, checking if it's already extracted..."
+        }
+        
+        # Look for the application DLL in the package
+        if [ -d "package-extracted/lib" ]; then
+          FRAMEWORK_DIR=$(find package-extracted/lib -type d -name "net9.0" | head -1)
+          if [ -n "$FRAMEWORK_DIR" ]; then
+            echo "Found application in: $FRAMEWORK_DIR"
+            cp -r "$FRAMEWORK_DIR"/* . 2>/dev/null || true
+          fi
+        fi
+      fi
+      
+      # Look for DLL files in current directory (from cache copy)
+      if [ -f "SmartMerchant.WEB.dll" ]; then
+        echo "Found SmartMerchant.WEB.dll in application directory"
+      else
+        # Search for DLL in subdirectories
+        APP_DLL=$(find . -name "SmartMerchant.WEB.dll" -type f 2>/dev/null | head -1)
+        if [ -n "$APP_DLL" ]; then
+          echo "Found application DLL: $APP_DLL"
+          DLL_DIR=$(dirname "$APP_DLL")
+          if [ "$DLL_DIR" != "." ]; then
+            cp -r "$DLL_DIR"/* . 2>/dev/null || true
+          fi
+        else
+          echo "WARNING: SmartMerchant.WEB.dll not found"
+          echo "Listing directory contents:"
+          ls -la
+        fi
+      fi
+      
+      # The DLL should be in lib/net9.0/ directory - copy ALL DLLs to root
+      if [ -d "lib/net9.0" ]; then
+        echo "Copying ALL DLLs and files from lib/net9.0..."
+        cp lib/net9.0/*.dll . 2>/dev/null || true
+        cp lib/net9.0/*.deps.json . 2>/dev/null || true
+        cp lib/net9.0/*.runtimeconfig.json . 2>/dev/null || true
+        cp lib/net9.0/*.pdb . 2>/dev/null || true
+        echo "Copied $(ls -1 lib/net9.0/*.dll 2>/dev/null | wc -l) DLLs from lib/net9.0"
+      fi
+      
+      # Copy ENTIRE content folder structure to root
+      if [ -d "content" ]; then
+        echo "Copying ENTIRE content folder structure..."
+        # Copy everything from content to root, preserving directory structure
+        cp -r content/* . 2>/dev/null || true
+        # Also copy hidden files if any
+        cp -r content/.[^.]* . 2>/dev/null || true
+        echo "Content folder copied (wwwroot, Pages, Views, appsettings.json, etc.)"
+      fi
+      
+      # Verify required files
+      if [ ! -f "SmartMerchant.WEB.dll" ]; then
+        echo "ERROR: SmartMerchant.WEB.dll not found after extraction"
+        echo "Directory contents:"
+        ls -la
+        exit 1
+      fi
+      
+      echo "✓ Found DLL: SmartMerchant.WEB.dll"
+      if [ -d "wwwroot" ]; then
+        echo "✓ Found wwwroot folder"
+      else
+        echo "WARNING: wwwroot folder not found"
+      fi
+      
+      # Create a simple runner script
+      cat > run-app.sh <<'RUNEOF'
+#!/bin/bash
+cd /opt/smartmerchant
+if [ -f "SmartMerchant.WEB.dll" ]; then
+  echo "========================================="
+  echo "  Starting SmartMerchant.WEB"
+  echo "========================================="
+  echo "Application will be available at:"
+  echo "  - http://localhost:5000 (from VM)"
+  echo "  - http://192.168.56.10:5000 (from host)"
+  echo ""
+  echo "Press Ctrl+C to stop"
+  echo "========================================="
+  dotnet SmartMerchant.WEB.dll --urls "http://0.0.0.0:5000"
+else
+  echo "ERROR: SmartMerchant.WEB.dll not found"
+  echo "Listing directory contents:"
+  ls -la
+  exit 1
+fi
+RUNEOF
+      chmod +x run-app.sh
+      
+      # Create a systemd service to run the app in background (optional)
+      cat > /tmp/smartmerchant.service <<'SERVICEEOF'
+[Unit]
+Description=SmartMerchant.WEB Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/smartmerchant
+ExecStart=/usr/bin/dotnet /opt/smartmerchant/SmartMerchant.WEB.dll --urls http://0.0.0.0:5000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+SERVICEEOF
+      
+      # Note: To enable the service, run: sudo systemctl enable /tmp/smartmerchant.service && sudo systemctl start smartmerchant
+      echo "Note: Application can be run with: ./run-app.sh"
+      echo "      Or start in background: nohup ./run-app.sh > app.log 2>&1 &"
+      
+      echo "✓ Found DLL: SmartMerchant.WEB.dll"
+      if [ -d "wwwroot" ]; then
+        echo "✓ Found wwwroot folder"
+      fi
+      
+      echo ""
+      echo "========================================="
+      echo "  Starting Application"
+      echo "========================================="
+      
+      # Start the application in background
+      cd /opt/smartmerchant
+      nohup ./run-app.sh > /opt/smartmerchant/app.log 2>&1 &
+      sleep 3
+      
+      # Check if app started successfully
+      if ps aux | grep -q "[d]otnet SmartMerchant.WEB.dll"; then
+        echo "✓ Started Success!"
+        echo ""
+        echo "╔════════════════════════════════════════╗"
+        echo "║   SmartMerchant.WEB is Running!        ║"
+        echo "╠════════════════════════════════════════╣"
+        echo "║  Access from host:                     ║"
+        echo "║  http://192.168.56.10:5000             ║"
+        echo "║  http://localhost:5000                 ║"
+        echo "╠════════════════════════════════════════╣"
+        echo "║  To view logs:                         ║"
+        echo "║  tail -f /opt/smartmerchant/app.log    ║"
+        echo "║  To restart:                           ║"
+        echo "║  cd /opt/smartmerchant && ./run-app.sh ║"
+        echo "╚════════════════════════════════════════╝"
+        echo ""
+      else
+        echo "WARNING: Application may not have started. Check logs:"
+        echo "  tail -f /opt/smartmerchant/app.log"
+      fi
+      
+      echo "========================================="
+      echo "  Ubuntu VM setup complete!"
+      echo "========================================="
+      echo "BaGet URL: http://192.168.56.1:5555/v3/index.json"
+      echo "Package: SmartMerchant.WEB v1.0.2"
+      echo "========================================="
+    SHELL
+  end
+  
+  # Debian VM - Lightweight Debian Server
+  config.vm.define "debian" do |debian|
+    debian.vm.box = "debian/bookworm64"
+    debian.vm.box_version = ">= 0"
+    
+    # Minimal resources
+    debian.vm.provider "virtualbox" do |vb|
+      vb.name = "SmartMerchant-Debian"
+      vb.memory = "2048"
+      vb.cpus = 4
+      vb.gui = false
+    end
+    
+    # Network configuration - host-only to access host's BaGet
+    debian.vm.network "private_network", ip: "192.168.56.11"
+    
+    # Forward port for web application
+    debian.vm.network "forwarded_port", guest: 5000, host: 5001
+    
+    # Provision Debian VM (same as Ubuntu)
+    debian.vm.provision "shell", inline: <<-SHELL
+      echo "========================================="
+      echo "  VM Started - Setting up Debian"
+      echo "========================================="
+      
+      # Update system
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update -qq
+      apt-get upgrade -y -qq
+      apt-get install -y -qq curl wget gnupg software-properties-common
+      
+      # Install .NET 9 SDK
+      echo "VM Updated - Installing .NET 9 SDK..."
+      wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+      chmod +x dotnet-install.sh
+      ./dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet
+      export PATH="$PATH:/usr/share/dotnet"
+      ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
+      dotnet --version
+      
+      # Configure NuGet
+      echo "Configuring NuGet..."
+      apt-get install -y -qq unzip
+      
+      # Download and deploy the application from BaGet
+      echo "========================================="
+      echo "  VM Installed dotnet - Downloading Package"
+      echo "========================================="
+      
+      APP_DIR="/opt/smartmerchant"
+      mkdir -p "$APP_DIR"
+      cd "$APP_DIR"
+      
+      # Test connectivity to BaGet first
+      echo "Testing BaGet connectivity..."
+      BAGET_HOST="192.168.56.1"
+      if ! curl -f -s -o /dev/null -w "%{http_code}" "http://$BAGET_HOST:5555/v3/index.json" | grep -q "200"; then
+        echo "Trying alternative host IPs..."
+        for HOST_IP in "10.0.2.2" "192.168.56.1" "192.168.33.1"; do
+          if curl -f -s -o /dev/null -w "%{http_code}" "http://$HOST_IP:5555/v3/index.json" | grep -q "200"; then
+            echo "Found BaGet at $HOST_IP:5555"
+            BAGET_HOST="$HOST_IP"
+            break
+          fi
+        done
+      fi
+      
+      echo "BaGet host: $BAGET_HOST:5555"
+      
+      # Use dotnet to download and cache the package
+      echo "Using dotnet to download package from BaGet..."
+      rm -rf /tmp/dotnet-restore
+      mkdir -p /tmp/dotnet-restore
+      cd /tmp/dotnet-restore
+      dotnet new web -n TempProj --force
+      cd TempProj
+      
+      # Configure NuGet to use BaGet
+      mkdir -p ~/.nuget/NuGet
+      cat > ~/.nuget/NuGet/NuGet.Config <<NUGETCFG
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="BaGet" value="http://$BAGET_HOST:5555/v3/index.json" allowInsecureConnections="true" />
+  </packageSources>
+</configuration>
+NUGETCFG
+      
+      # Add the package (this will download it to cache)
+      echo "Adding package SmartMerchant.WEB version 1.0.2..."
+      dotnet add package SmartMerchant.WEB --version 1.0.2 || echo "Package add failed, but checking cache..."
+      
+      # Find the package in NuGet cache
+      PACKAGE_CACHE="$HOME/.nuget/packages/smartmerchant.web/1.0.2"
+      if [ -d "$PACKAGE_CACHE" ]; then
+        echo "Found package in NuGet cache: $PACKAGE_CACHE"
+        
+        # Copy everything from cache
+        echo "Copying package contents to application directory..."
+        cp -r "$PACKAGE_CACHE"/* "$APP_DIR/" 2>/dev/null || true
+        
+        # Copy DLL and related files from lib/net9.0
+        if [ -d "$APP_DIR/lib/net9.0" ]; then
+          echo "Copying DLL and related files from lib/net9.0..."
+          cp "$APP_DIR/lib/net9.0"/*.dll "$APP_DIR/" 2>/dev/null || true
+          cp "$APP_DIR/lib/net9.0"/*.deps.json "$APP_DIR/" 2>/dev/null || true
+          cp "$APP_DIR/lib/net9.0"/*.runtimeconfig.json "$APP_DIR/" 2>/dev/null || true
+          cp "$APP_DIR/lib/net9.0"/*.pdb "$APP_DIR/" 2>/dev/null || true
+        fi
+        
+        # Find and extract .nupkg file
+        NUPKG_FILE=$(find "$HOME/.nuget/packages" -name "SmartMerchant.WEB.1.0.2.nupkg" -o -name "smartmerchant.web.1.0.2.nupkg" 2>/dev/null | head -1)
+        if [ -n "$NUPKG_FILE" ] && [ -f "$NUPKG_FILE" ]; then
+          echo "Found .nupkg file: $NUPKG_FILE"
+          cp "$NUPKG_FILE" "$APP_DIR/SmartMerchant.WEB.1.0.2.nupkg"
+        fi
+      else
+        echo "ERROR: Package not found in cache at $PACKAGE_CACHE"
+        exit 1
+      fi
+      
+      cd "$APP_DIR"
+      echo "✓ Found project folder: $APP_DIR"
+      
+      # Extract package if .nupkg file exists
+      if [ -f "SmartMerchant.WEB.1.0.2.nupkg" ] && [ -s "SmartMerchant.WEB.1.0.2.nupkg" ]; then
+        echo "Extracting package..."
+        unzip -q SmartMerchant.WEB.1.0.2.nupkg -d package-extracted 2>/dev/null || {
+          echo "Package extraction failed, checking if it's already extracted..."
+        }
+        
+        # Look for the application DLL in the package
+        if [ -d "package-extracted/lib" ]; then
+          FRAMEWORK_DIR=$(find package-extracted/lib -type d -name "net9.0" | head -1)
+          if [ -n "$FRAMEWORK_DIR" ]; then
+            echo "Found application in: $FRAMEWORK_DIR"
+            cp -r "$FRAMEWORK_DIR"/* . 2>/dev/null || true
+          fi
+        fi
+      fi
+      
+      # Look for DLL files in current directory
+      if [ -f "SmartMerchant.WEB.dll" ]; then
+        echo "Found SmartMerchant.WEB.dll in application directory"
+      else
+        APP_DLL=$(find . -name "SmartMerchant.WEB.dll" -type f 2>/dev/null | head -1)
+        if [ -n "$APP_DLL" ]; then
+          echo "Found application DLL: $APP_DLL"
+          DLL_DIR=$(dirname "$APP_DLL")
+          if [ "$DLL_DIR" != "." ]; then
+            cp -r "$DLL_DIR"/* . 2>/dev/null || true
+          fi
+        fi
+      fi
+      
+      # The DLL should be in lib/net9.0/ directory - ensure it's in root
+      if [ -d "lib/net9.0" ]; then
+        echo "Copying ALL DLLs and files from lib/net9.0..."
+        cp lib/net9.0/*.dll . 2>/dev/null || true
+        cp lib/net9.0/*.deps.json . 2>/dev/null || true
+        cp lib/net9.0/*.runtimeconfig.json . 2>/dev/null || true
+        cp lib/net9.0/*.pdb . 2>/dev/null || true
+        echo "Copied $(ls -1 lib/net9.0/*.dll 2>/dev/null | wc -l) DLLs from lib/net9.0"
+      fi
+      
+      # Copy ENTIRE content folder structure to root
+      if [ -d "content" ]; then
+        echo "Copying ENTIRE content folder structure..."
+        cp -r content/* . 2>/dev/null || true
+        cp -r content/.[^.]* . 2>/dev/null || true
+        echo "Content folder copied (wwwroot, Pages, Views, appsettings.json, etc.)"
+      fi
+      
+      # Verify required files
+      if [ ! -f "SmartMerchant.WEB.dll" ]; then
+        echo "ERROR: SmartMerchant.WEB.dll not found after extraction"
+        echo "Directory contents:"
+        ls -la
+        exit 1
+      fi
+      
+      echo "✓ Found DLL: SmartMerchant.WEB.dll"
+      if [ -d "wwwroot" ]; then
+        echo "✓ Found wwwroot folder"
+      fi
+      
+      # Create a simple runner script
+      cat > run-app.sh <<'RUNEOF'
+#!/bin/bash
+cd /opt/smartmerchant
+if [ -f "SmartMerchant.WEB.dll" ]; then
+  echo "========================================="
+  echo "  Starting SmartMerchant.WEB"
+  echo "========================================="
+  echo "Application will be available at:"
+  echo "  - http://localhost:5000 (from VM)"
+  echo "  - http://192.168.56.20:5000 (from host)"
+  echo ""
+  echo "Press Ctrl+C to stop"
+  echo "========================================="
+  dotnet SmartMerchant.WEB.dll --urls "http://0.0.0.0:5000"
+else
+  echo "ERROR: SmartMerchant.WEB.dll not found"
+  echo "Listing directory contents:"
+  ls -la
+  exit 1
+fi
+RUNEOF
+      chmod +x run-app.sh
+      
+      echo ""
+      echo "========================================="
+      echo "  Starting Application"
+      echo "========================================="
+      
+      # Start the application in background
+      cd /opt/smartmerchant
+      nohup ./run-app.sh > /opt/smartmerchant/app.log 2>&1 &
+      sleep 3
+      
+      # Check if app started successfully
+      if ps aux | grep -q "[d]otnet SmartMerchant.WEB.dll"; then
+        echo "✓ Started Success!"
+        echo ""
+        echo "╔════════════════════════════════════════╗"
+        echo "║   SmartMerchant.WEB is Running!        ║"
+        echo "╠════════════════════════════════════════╣"
+        echo "║  Access from host:                     ║"
+        echo "║  http://192.168.56.11:5001             ║"
+        echo "║  http://localhost:5000                 ║"
+        echo "╠════════════════════════════════════════╣"
+        echo "║  To view logs:                         ║"
+        echo "║  tail -f /opt/smartmerchant/app.log    ║"
+        echo "║  To restart:                           ║"
+        echo "║  cd /opt/smartmerchant && ./run-app.sh ║"
+        echo "╚════════════════════════════════════════╝"
+        echo ""
+      else
+        echo "WARNING: Application may not have started. Check logs:"
+        echo "  tail -f /opt/smartmerchant/app.log"
+      fi
+      
+      echo "========================================="
+      echo "  Debian VM setup complete!"
+      echo "========================================="
+      echo "BaGet URL: http://192.168.56.1:5555/v3/index.json"
+      echo "Package: SmartMerchant.WEB v1.0.2"
+      echo "========================================="
+    SHELL
+  end
+  
+  # Host configuration - ensure BaGet is accessible
+  config.trigger.before :up do |trigger|
+    trigger.info = "Checking if BaGet is running..."
+    trigger.run = {inline: "echo 'Make sure BaGet is running: docker-compose up -d'"}
+  end
+end
